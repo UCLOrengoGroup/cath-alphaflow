@@ -1,3 +1,10 @@
+#Folders
+sequences/
+formatted_sequences/
+formatted_structures/
+structures/
+logs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
