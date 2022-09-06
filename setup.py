@@ -31,10 +31,7 @@ setup(
         [console_scripts]
         cath-af-cli=cath_alphaflow.cli:cli
     """,
-    install_requires=[
-        "click",
-        "google-cloud-storage",
-    ],
+    install_requires=["click", "google-cloud-storage", "cx_oracle"],
     extras_require={"test": ["pytest"]},
     python_requires=">=3.7",
 )
