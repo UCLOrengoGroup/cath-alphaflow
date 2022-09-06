@@ -4,6 +4,8 @@ Workflow to annotate AlphaFold2 model structures with CATH domains.
 
 #### 1a. Global dataset (AF2 sequences)
 
+Name: CREATE_ALL_AF2_CHAIN_FASTA
+
 Input: 
 - `PARAM:AF2_DOWNLOAD_URL` -- AlphaFold Download (gs://public-datasets-deepmind-alphafold/sequences.fasta)
 
@@ -12,6 +14,8 @@ Output:
 
 
 #### 1b. Global dataset (Foldseek S95 library)
+
+Name: CREATE_DOMAIN_S95_PDB_DIR
 
 Input:
 - `FILE:DOMAIN_LIST_S95`
@@ -25,6 +29,8 @@ Process:
 - `rsync --files-from <FILE:DOMAIN_LIST_S95> <DIRECTORY:CATH_PDB_DOMAINS> <DIRECTORY:FOLDSEEK_S95_PDB_DB>`
 
 #### 1c. Global dataset (Foldseek S95 library)
+
+Name: CREATE_FOLDSEEK_S95_LIBRARY
 
 Input:
 - `PARAM:S95_DIR` -- folder containing S95 PDB files
@@ -40,6 +46,8 @@ Notes:
 
 #### 2a. Local dataset (CATH domains predictions)
 
+Name: CREATE_DATASET_CATH_FILES
+
 Input:
 - `SOURCE:OracleDB` -- `GENE3D_21.CATH_DOMAIN_PREDICTIONS{_EXTRA}`
 - `FILTER` -- CONDITIONAL_EVALUE <= 1e-50, top 10k hits (ordered by increasing evalue) 
@@ -51,6 +59,8 @@ Output:
 - `FILE:AF2_CHAIN_LIST` -- `(AF_chain_ID)`
 - `FILE:AF2_CATH_ORIG_ANNOTATIONS` -- `(AF_domain_ID_orig, CATH_domain_ID, UniProt_ID, md5, bitscore, resolved_boundaries, sfam_id, class_id)`
 #### 2b. Local dataset (AF2 Structure)
+
+Name: CREATE_DATASET_AF2_FILES
 
 Input: 
 - `FILE:CSV_UNIPROT_MD5`
@@ -64,8 +74,10 @@ Output:
 Process:
 - `GCS` -- `cat [manifest file] | gsutil -m cp -I . `  
 - `CS` -- (local): symlinking (check if it exists) 
-     
+
 #### 3a. Run SETH (Chain sequence)
+
+Name: CREATE_ANNOTATION_CHAIN_DISORDER
 
 Input:
 - `FILE:ALL_CHAIN_FASTA`
@@ -77,6 +89,8 @@ Process:
 - `SETH_1.py -i <your input fasta file name> -o <the desired name of your output file>`
 
 #### 3b. Filter (Disordered Chain)
+
+Name: FILTER_DOMAINLIST_BY_CHAIN_DISORDER
 
 Input:
 - `FILE:SETH_CHAIN_OUTPUT_FILE`
@@ -92,6 +106,8 @@ Process:
 
 #### 4. Optimize domain boundaries (chop tails)
 
+Name: OPTIMISE_DOMAIN_BOUNDARIES
+
 Input:
 - `FILE:AF2_CATH_ORIG_ANNOTATIONS`
 - `FILE:AF2_CHAIN_MMCIF`
@@ -106,6 +122,8 @@ Process:
 
 #### 5a. Run SETH (Domain sequence)
 
+Name: CREATE_ANNOTATION_DOMAIN_DISORDER
+
 Input:
 - `FILE:ALL_CHAIN_FASTA`
 - `FILE:AF2_DOMAIN_LIST_POST_TAILCHOP`
@@ -117,6 +135,8 @@ Process:
 - `SETH_1.py -i <your input fasta file name> -o <the desired name of your output file>`
 
 #### 5b. Filter (Disordered Domain)
+
+Name: FILTER_DOMAINLIST_BY_DISORDER
 
 Input:
 - `FILE:SETH_DOMAIN_OUTPUT_FILE`
@@ -132,6 +152,8 @@ Process:
 
 #### 6. Filter: AF2 Quality (pLDDT, LUR)
 
+Name: FILTER_DOMAINLIST_BY_AF2_QUALITY
+
 Input:
 - `FILE:AF2_CHAIN_MMCIF`
 - `FILE:AF2_DOMAIN_LIST_POST_DOMAIN_DISORDER`
@@ -144,6 +166,8 @@ Process:
 - `python filter_af2_quality.py`
 
 #### 7. Filter: AF2 Packing (packing, Surf/Vol)
+
+Name: FILTER_DOMAINLIST_BY_AF2_PACKING
 
 Input:
 - `FILE:AF2_CHAIN_MMCIF`
@@ -158,6 +182,8 @@ Process:
 
 #### 8. Filter: SSE (DSSP+secmake)
 
+Name: FILTER_DOMAINLIST_BY_SSE
+
 Input:
 - `FILE:AF2_CHAIN_MMCIF`
 - `FILE:AF2_DOMAIN_LIST_POST_AF_PACKING`
@@ -170,6 +196,8 @@ Process:
 - `python3 filter_sse.py`
 
 #### 9. Run Chopping 
+
+Name: CHOP_AF2_DOMAINS
 
 Input:
 - `FILE:AF2_DOMAIN_LIST_POST_SSE` -- `af_<Uniprot_ID>/<start>-<stop>`
@@ -186,6 +214,8 @@ submit.sh
 ```
 
 #### 10. Foldseek S95
+
+Name: CREATE_ANNOTATION_FOLDSEEK_S95
 
 Input:
 - `FILE:FOLDSEEK_S95_DB`
@@ -204,6 +234,8 @@ foldseek convertalis AF2_DOMAIN_MMCIF_DB FOLDSEEK_S95_DB
 ```
 
 #### 11. Create Table
+
+Name: CREATE_RESULTS_TABLE
 
 Input:
 - `FILE:AF2_DOMAIN_LIST_POST_SSE`
