@@ -12,10 +12,10 @@ def get_csv_dictreader(csvfile, **kwargs):
     return csv.DictReader(csvfile, delimiter="\t", **kwargs)
 
 
-def chunked_iterable(iterable, *, size):
+def chunked_iterable(iterable, *, chunk_size):
     it = iter(iterable)
     while True:
-        chunk = tuple(itertools.islice(it, size))
+        chunk = tuple(itertools.islice(it, chunk_size))
         if not chunk:
             break
         yield chunk
