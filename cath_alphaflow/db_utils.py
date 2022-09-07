@@ -56,8 +56,8 @@ def make_dict_factory(cursor):
 def next_cath_dataset_entry(
     conn,
     *,
-    max_independent_evalue,
     gene3d_dbname,
+    max_independent_evalue=None,
     max_records=None,
     uniprot_ids=None,
 ) -> PredictedCathDomain:
@@ -75,13 +75,13 @@ def next_cath_dataset_entry(
     if uniprot_ids:
 
         uniprot_id_placeholders = {
-            "u" + num: uniprot_id for num, uniprot_id in enumerate(uniprot_ids, 1)
+            f"u{num}": uniprot_id for num, uniprot_id in enumerate(uniprot_ids, 1)
         }
         sql_args.update(uniprot_id_placeholders)
         sql_where_args += [
             (
                 "upa.ACCESSION IN ("
-                + ", ".join([":u" + num for num in range(1, len(uniprot_ids))])
+                + ", ".join([f":u{num}" for num in range(1, len(uniprot_ids) + 1)])
                 + ")"
             )
         ]
