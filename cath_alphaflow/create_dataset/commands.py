@@ -103,12 +103,6 @@ def create_dataset_uniprot_ids(uniprot_ids_csv, gene3d_dbname, max_evalue, max_r
     help="Param: database to use when querying sequences",
 )
 @click.option(
-    "--max_evalue",
-    "max_evalue",
-    type=str,
-    help="Param: restrict UniProt IDs by independent evalue of Gene3D hits",
-)
-@click.option(
     "--chunk",
     "chunk_size",
     type=int,
@@ -118,7 +112,7 @@ def create_dataset_uniprot_ids(uniprot_ids_csv, gene3d_dbname, max_evalue, max_r
 def create_dataset_cath_files(
     csv_uniprot_ids,
     csv_uniprot_md5,
-    crh_output,
+    gene3d_crh_output,
     af2_domainlist_ids,
     af2_chainlist_ids,
     af2_cath_annotations,
@@ -126,8 +120,6 @@ def create_dataset_cath_files(
     chunk_size,
 ):
     "Creates CATH data files for a given dataset"
-
-    conn = get_cathora_connection()
 
     # setup reader
     uniprot_reader = get_csv_dictreader(csv_uniprot_ids)
@@ -137,12 +129,14 @@ def create_dataset_cath_files(
     # setup writers
     crh_output_headers = [
         "sequence_md5",
-        "gene3d_domain_id",
+        "cath_domain_id",
         "score",
         "boundaries",
         "resolved",
     ]
-    crh_output_writer = get_csv_dictwriter(crh_output, fieldnames=crh_output_headers)
+    crh_output_writer = get_csv_dictwriter(
+        gene3d_crh_output, fieldnames=crh_output_headers
+    )
     # NOTE: do not write headers to crh output
 
     csv_uniprot_md5_headers = ["uniprot_acc", "sequence_md5"]
@@ -163,7 +157,13 @@ def create_dataset_cath_files(
     )
     af2_chainlist_writer.writeheader()
 
-    af2_cath_annotations_headers = ["AF2_CHAIN_ID"]
+    af2_cath_annotations_headers = [
+        "cath_domain_id",
+        "uniprot_acc",
+        "md5",
+        "bitscore",
+        "chopping",
+    ]
     af2_cath_annotations_writer = get_csv_dictwriter(
         af2_cath_annotations, fieldnames=af2_cath_annotations_headers
     )
@@ -172,9 +172,10 @@ def create_dataset_cath_files(
     # how we are going to process a chunk of uniprot ids
     def process_uniprot_ids(uniprot_ids):
 
+        conn = get_cathora_connection()
+
         for entry in next_cath_dataset_entry(
             conn,
-            max_independent_evalue=1e-50,
             gene3d_dbname=gene3d_dbname,
             uniprot_ids=uniprot_ids,
         ):
@@ -188,17 +189,34 @@ def create_dataset_cath_files(
             af2_chain_id = "???"
 
             # write data
-            csv_uniprot_md5_writer.writerow([uniprot_acc, sequence_md5])
-            af2_domainlist_writer.writerow([af2_domain_id])
-            af2_chainlist_writer.writerow([af2_chain_id])
-            af2_cath_annotations_writer.writerow([])
+            csv_uniprot_md5_writer.writerow(
+                {"uniprot_acc": uniprot_acc, "sequence_md5": sequence_md5}
+            )
+            af2_domainlist_writer.writerow({"af2_domain_id": af2_domain_id})
+            af2_chainlist_writer.writerow({"af2_chain_id": af2_chain_id})
+            af2_cath_annotations_writer.writerow(
+                {
+                    "cath_domain_id": gene3d_domain_id,
+                    "uniprot_acc": uniprot_acc,
+                    "md5": sequence_md5,
+                    "bitscore": bitscore,
+                    "chopping": chopping,
+                }
+            )
 
             # use the 'correct' chopping in both cols
             crh_output_writer.writerow(
-                [sequence_md5, gene3d_domain_id, bitscore, chopping, chopping]
+                {
+                    "cath_domain_id": gene3d_domain_id,
+                    "sequence_md5": sequence_md5,
+                    "score": bitscore,
+                    "boundaries": chopping,
+                    "resolved": chopping,
+                }
             )
 
     # process chunks of uniprot ids
     for chunked_uniprot_rows in chunked_iterable(uniprot_reader, chunk_size=chunk_size):
-        uniprot_ids = [row.uniprot_acc for row in chunked_uniprot_rows]
+        uniprot_ids = [row.get("uniprot_acc") for row in chunked_uniprot_rows]
+        LOG.info("Processing %s UniProtIDs %s...", len(uniprot_ids), uniprot_ids[:3])
         process_uniprot_ids(uniprot_ids)
