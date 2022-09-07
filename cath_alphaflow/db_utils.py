@@ -7,7 +7,7 @@ LOG = logging.getLogger(__name__)
 
 
 def get_cathora_connection(
-    host="localhost",
+    host="odb.cs.ucl.ac.uk",
     port=1521,
     sid="cathora1",
     user="orengoreader",
