@@ -1,55 +1,18 @@
-import csv
-from dataclasses import dataclass
-import itertools
 import logging
-
 import click
-import cx_Oracle
+
+from cath_alphaflow.io_utils import get_csv_dictreader
+from cath_alphaflow.io_utils import get_csv_dictwriter
+from cath_alphaflow.io_utils import chunked_iterable
+from cath_alphaflow.db_utils import get_cathora_connection
+from cath_alphaflow.db_utils import next_cath_dataset_entry
 
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s"
-)
 LOG = logging.getLogger()
 
 DEFAULT_CHUNK_SIZE = 1000
 SEQUENCE_TABLE_NAMES = ["sequences", "sequences_extra"]
 UNIPROT_ACC_TABLE = ["uniprot_prim_acc"]
-
-
-@dataclass
-class CathDataset:
-    uniprot_acc: str
-    sequence_md5: str
-    gene3d_domain_id: str
-    bitscore: str
-    resolved: str
-
-
-def get_cathora_connection():
-    """Connect to the Oracle Database"""
-    dsn = cx_Oracle.makedsn("localhost", 1521, sid="cathora1")
-    conn = cx_Oracle.connect(user="orengoreader", password="orengoreader", dsn=dsn)
-    return conn
-
-
-def get_csv_dictwriter(csvfile, fieldnames, **kwargs):
-    """Common CSV writer"""
-    return csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter="\t", **kwargs)
-
-
-def get_csv_dictreader(csvfile, **kwargs):
-    """Common CSV reader"""
-    return csv.DictReader(csvfile, delimiter="\t", **kwargs)
-
-
-def chunked_iterable(iterable, *, size):
-    it = iter(iterable)
-    while True:
-        chunk = tuple(itertools.islice(it, size))
-        if not chunk:
-            break
-        yield chunk
 
 
 @click.command()
@@ -86,14 +49,20 @@ def create_dataset_uniprot_ids(uniprot_ids_csv, gene3d_dbname, max_evalue, max_r
     csv_writer = get_csv_dictwriter(uniprot_ids_csv, fieldnames=headers)
     csv_writer.writeheader()
 
-    click.echo("Writing ")
+    click.echo(
+        f"Querying Dataset UniProtIDs "
+        f"(max_evalue={max_evalue}, max_records={max_records}, file={uniprot_ids_csv.name}) ..."
+    )
     for entry in next_cath_dataset_entry(
         conn,
         max_independent_evalue=max_evalue,
         max_records=max_records,
         gene3d_dbname=gene3d_dbname,
     ):
-        csv_writer.writerow([entry.uniprot_acc])
+        LOG.debug(f"Entry: {entry}")
+        csv_writer.writerow({"uniprot_acc": entry.uniprot_acc})
+
+    click.echo("DONE")
 
 
 @click.command()
@@ -232,115 +201,5 @@ def create_dataset_cath_files(
 
     # process chunks of uniprot ids
     for chunked_uniprot_rows in chunked_iterable(uniprot_reader, chunk_size=chunk_size):
-        uniprot_ids = [row.get("UNIPROT_ACC") for row in chunked_uniprot_rows]
+        uniprot_ids = [row.uniprot_acc for row in chunked_uniprot_rows]
         process_uniprot_ids(uniprot_ids)
-
-
-def make_dict_factory(cursor):
-    """Turn a row into a dict"""
-    col_names = [d[0] for d in cursor.description]
-
-    def create_row(*args):
-        return dict(zip(col_names, args))
-
-    return create_row
-
-
-def next_cath_dataset_entry(
-    conn,
-    *,
-    max_independent_evalue,
-    gene3d_dbname,
-    max_records=None,
-    uniprot_ids=None,
-) -> CathDataset:
-    """
-    Returns a generator that provides CathDataset entries
-    """
-
-    if not max_records and not uniprot_ids:
-        raise RuntimeError("need to specify one of [max_records, uniprot_ids]")
-
-    sql_args = {}
-    sql_where = ""
-    if uniprot_ids:
-        uniprot_id_placeholders = {
-            "u" + num: uniprot_id for num, uniprot_id in enumerate(uniprot_ids, 1)
-        }
-        sql_args.update(uniprot_id_placeholders)
-        sql_where += (
-            " upa.ACCESSION IN ("
-            + ", ".join([":u" + num for num in range(1, len(uniprot_ids))])
-            + ") "
-        )
-
-    if max_independent_evalue:
-        sql_args.update({"max_independent_evalue": max_independent_evalue})
-        sql_where += " INDEPENDENT_EVALUE <= :max_independent_evalue "
-
-    if max_records:
-        sql_args.update({"max_records": max_records})
-        sql_where += " ROWNUM <= :max_records "
-
-    with conn.cursor() as curs:
-        try:
-            sql = f"""
-SELECT
-    upa.ACCESSION                           AS uniprot_acc,
-    upa.SEQUENCE_MD5                        AS sequence_md5,
-    DOMAIN_ID || '__' || SUPERFAMILY || '/'
-        || REPLACE(RESOLVED, ',', '_')      AS gene3d_domain_id,
-    SCORE                                   AS bitscore,
-    RESOLVED                                AS chopping
-FROM
-    {gene3d_dbname}.CATH_DOMAIN_PREDICTIONS cdp
-    LEFT JOIN {gene3d_dbname}.UNIPROT_PRIM_ACC upa
-        ON (cdp.SEQUENCE_MD5 = upa.SEQUENCE_MD5)
-WHERE
-    {sql_where}
-ORDER BY
-    INDEPENDENT_EVALUE ASC
-"""
-            curs.execute(sql, **sql_args)
-            curs.rowfactory = make_dict_factory(curs)
-        except cx_Oracle.Error as err:
-            LOG.warning(f"SQL command failed: {err}")
-            raise
-        for rowdict in curs:
-            entry = CathDataset(**rowdict)
-            yield entry
-
-
-def dump_md5_crh_output(
-    conn, gene3d_dbname, output_fh, independent_evalue, max_records
-):
-    md5_list = []
-    with conn.cursor() as cur:
-        try:
-            sql = f"""
-SELECT
-    SEQUENCE_MD5,
-    DOMAIN_ID || '__' || SUPERFAMILY || '/' || REPLACE(RESOLVED,',','_') AS GENE3D_DOMAIN_ID,
-    SCORE,
-    BOUNDARIES,
-    RESOLVED
-FROM {gene3d_dbname}.CATH_DOMAIN_PREDICTIONS cdp
-WHERE
-    INDEPENDENT_EVALUE <= :independent_evalue
-    AND
-    ROWNUM <= :max_records
-ORDER BY
-    INDEPENDENT_EVALUE ASC
-;"""
-            cur.execute(
-                sql, independent_evalue=independent_evalue, max_records=max_records
-            )
-        except cx_Oracle.Error as err:
-            LOG.warning(f"SQL command failed: {err}")
-            raise
-        for sequence_md5, gene3d_domain_id, score, boundaries, resolved in cur:
-            output_fh.write(
-                "\t".join([sequence_md5, gene3d_domain_id, score, boundaries, resolved])
-                + "\n"
-            )
-            md5_list.append(sequence_md5)
