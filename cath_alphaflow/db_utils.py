@@ -23,7 +23,7 @@ def get_cathora_connection(
 
 def yieldall(connection, sql_stmt, *args, return_type=None):
     """
-    Run SQL query and yield row one-by-one
+    Run SQL query and yield rows one-by-one
     """
 
     with connection as conn:
@@ -68,9 +68,12 @@ def next_cath_dataset_entry(
     if not max_records and not uniprot_ids:
         raise RuntimeError("need to specify one of [max_records, uniprot_ids]")
 
+    # organise filters in the where clause
+    # (SQL placeholders and cooresponding substitutions key/values)
     sql_args = {}
     sql_where_args = []
     if uniprot_ids:
+
         uniprot_id_placeholders = {
             "u" + num: uniprot_id for num, uniprot_id in enumerate(uniprot_ids, 1)
         }
@@ -91,6 +94,7 @@ def next_cath_dataset_entry(
         sql_args.update({"max_records": max_records})
         sql_where_args += ["ROWNUM <= :max_records"]
 
+    # join all where clauses together with 'AND' operator
     sql_where = " AND ".join(sql_where_args)
 
     sql = f"""
@@ -107,11 +111,12 @@ FROM
         ON (cdp.SEQUENCE_MD5 = upa.SEQUENCE_MD5)
 WHERE
     {sql_where}
-    AND ROWNUM <= 100
 ORDER BY
     INDEPENDENT_EVALUE ASC, upa.ACCESSION ASC
 """
 
+    # execute query and yield results (as dict) row by row
     for rowdict in yieldall(conn, sql, sql_args, return_type=dict):
+        # convert dict to data structure
         entry = PredictedCathDomain(**rowdict)
         yield entry
