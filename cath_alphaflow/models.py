@@ -1,4 +1,3 @@
-from ast import Num
 import logging
 import re
 from typing import List
@@ -26,7 +25,7 @@ class PredictedCathDomain:
     uniprot_acc: str
     sequence_md5: str
     gene3d_domain_id: str
-    bitscore: Num
+    bitscore: float
     chopping: str
 
 
