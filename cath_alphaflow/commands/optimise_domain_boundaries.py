@@ -3,6 +3,7 @@ import click
 
 from cath_alphaflow.io_utils import get_af_domain_id_reader
 from cath_alphaflow.io_utils import get_csv_dictwriter
+from cath_alphaflow.models import AFDomainID
 
 
 LOG = logging.getLogger()
@@ -87,7 +88,7 @@ def optimise_domain_boundaries(
     click.echo("DONE")
 
 
-def calculate_domain_id_post_tailchop(af_domain_id, af_chain_mmcif_dir):
+def calculate_domain_id_post_tailchop(af_domain_id: AFDomainID, af_chain_mmcif_dir):
 
     af_domain_id_post_tailchop = None
 
