@@ -25,7 +25,7 @@ LOG = logging.getLogger()
 )
 @click.option(
     "--af2_chain_mmcif_dir",
-    type=click.Path,
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True),
     required=True,
     help="Input: directory of mmCIF files",
 )
@@ -41,7 +41,7 @@ LOG = logging.getLogger()
     required=True,
     help="Output: CSV file for mapping of AF2 domain before/after chopping",
 )
-def create_dataset_uniprot_ids(
+def optimise_domain_boundaries(
     af2_domain_list,
     af2_chain_mmcif_dir,
     af2_domain_list_post_tailchop,
