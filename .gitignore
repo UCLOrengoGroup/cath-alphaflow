@@ -139,3 +139,5 @@ dmypy.json
 .nextflow/
 work/
 .nextflow.log.*
+dataset10k*
+config.env
