@@ -1,3 +1,4 @@
+from cath_alphaflow import settings
 import pytest
 import cx_Oracle
 
@@ -107,3 +108,11 @@ def create_mock_query(monkeypatch, mock_connection):
     yield _create_mock_query
 
     # cleanup
+
+
+@pytest.fixture
+def mock_settings(monkeypatch):
+    def mock_get_default_settings(*args, **kwargs):
+        return settings.TestSettings()
+
+    monkeypatch.setattr(settings, "get_default_settings", mock_get_default_settings)
