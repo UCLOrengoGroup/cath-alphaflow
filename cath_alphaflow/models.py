@@ -55,6 +55,9 @@ class Chopping:
             segs.append(seg)
         return Chopping(segments=segs)
 
+    def to_str(self):
+        return "_".join([f"{seg.start}-{seg.end}" for seg in self.segments])
+
 
 @dataclass
 class AFChainID:
@@ -78,6 +81,12 @@ class AFChainID:
 
         return chainid
 
+    def to_str(self):
+        return f"AF-{self.uniprot_acc}-F{self.fragment_number}-v{self.version}"
+
+    def __str__(self):
+        return self.to_af_chain_id_str()
+
 
 @dataclass
 class AFDomainID(AFChainID):
@@ -100,3 +109,6 @@ class AFDomainID(AFChainID):
             raise
 
         return domid
+
+    def to_str(self):
+        return f"AF-{self.uniprot_acc}-F{self.fragment_number}-v{self.version}/{self.chopping.to_str()}"
