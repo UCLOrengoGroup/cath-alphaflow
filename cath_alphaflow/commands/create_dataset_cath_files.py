@@ -30,17 +30,17 @@ DEFAULT_CHUNK_SIZE = 1000
     help="Output: CRH output file for Gene3D domains",
 )
 @click.option(
-    "--af2_domainlist_ids",
+    "--af_domainlist_ids",
     type=click.File("wt"),
     help="Output: CSV file of AF2 domain ids",
 )
 @click.option(
-    "--af2_chainlist_ids",
+    "--af_chainlist_ids",
     type=click.File("wt"),
     help="Output: CSV file of AF2 chain ids",
 )
 @click.option(
-    "--af2_cath_annotations",
+    "--af_cath_annotations",
     type=click.File("wt"),
     help="Output: CSV file of CATH annotations",
 )
@@ -61,9 +61,9 @@ def create_dataset_cath_files(
     csv_uniprot_ids,
     csv_uniprot_md5,
     gene3d_crh_output,
-    af2_domainlist_ids,
-    af2_chainlist_ids,
-    af2_cath_annotations,
+    af_domainlist_ids,
+    af_chainlist_ids,
+    af_cath_annotations,
     gene3d_dbname,
     chunk_size,
 ):
@@ -91,29 +91,29 @@ def create_dataset_cath_files(
     )
     csv_uniprot_md5_writer.writeheader()
 
-    af2_domainlist_headers = ["af2_domain_id"]
-    af2_domainlist_writer = get_csv_dictwriter(
-        af2_domainlist_ids, fieldnames=af2_domainlist_headers
+    af_domainlist_headers = ["af_domain_id"]
+    af_domainlist_writer = get_csv_dictwriter(
+        af_domainlist_ids, fieldnames=af_domainlist_headers
     )
-    af2_domainlist_writer.writeheader()
+    af_domainlist_writer.writeheader()
 
-    af2_chainlist_headers = ["af2_chain_id"]
-    af2_chainlist_writer = get_csv_dictwriter(
-        af2_chainlist_ids, fieldnames=af2_chainlist_headers
+    af_chainlist_headers = ["af_chain_id"]
+    af_chainlist_writer = get_csv_dictwriter(
+        af_chainlist_ids, fieldnames=af_chainlist_headers
     )
-    af2_chainlist_writer.writeheader()
+    af_chainlist_writer.writeheader()
 
-    af2_cath_annotations_headers = [
+    af_cath_annotations_headers = [
         "cath_domain_id",
         "uniprot_acc",
         "md5",
         "bitscore",
         "chopping",
     ]
-    af2_cath_annotations_writer = get_csv_dictwriter(
-        af2_cath_annotations, fieldnames=af2_cath_annotations_headers
+    af_cath_annotations_writer = get_csv_dictwriter(
+        af_cath_annotations, fieldnames=af_cath_annotations_headers
     )
-    af2_cath_annotations_writer.writeheader()
+    af_cath_annotations_writer.writeheader()
 
     # how we are going to process a chunk of uniprot ids
     def process_uniprot_ids(uniprot_ids):
@@ -130,16 +130,16 @@ def create_dataset_cath_files(
             gene3d_domain_id = entry.gene3d_domain_id
             bitscore = entry.bitscore
             chopping = entry.chopping
-            af2_domain_id = "???"
-            af2_chain_id = "???"
+            af_domain_id = "???"
+            af_chain_id = "???"
 
             # write data
             csv_uniprot_md5_writer.writerow(
                 {"uniprot_acc": uniprot_acc, "sequence_md5": sequence_md5}
             )
-            af2_domainlist_writer.writerow({"af2_domain_id": af2_domain_id})
-            af2_chainlist_writer.writerow({"af2_chain_id": af2_chain_id})
-            af2_cath_annotations_writer.writerow(
+            af_domainlist_writer.writerow({"af_domain_id": af_domain_id})
+            af_chainlist_writer.writerow({"af_chain_id": af_chain_id})
+            af_cath_annotations_writer.writerow(
                 {
                     "cath_domain_id": gene3d_domain_id,
                     "uniprot_acc": uniprot_acc,
