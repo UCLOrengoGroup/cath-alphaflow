@@ -1,15 +1,18 @@
 import logging
 import cx_Oracle
 
+from cath_alphaflow.config import get_default_config
 from cath_alphaflow.models import PredictedCathDomain
 
 LOG = logging.getLogger(__name__)
 
-DEFAULT_HOST = "odb.cs.ucl.ac.uk"
-DEFAULT_PORT = 1521
-DEFAULT_SID = "cathora1"
-DEFAULT_USER = "orengoreader"
-DEFAULT_PASSWORD = "orengoreader"
+config = get_default_config()
+
+DEFAULT_HOST = config.ORACLE_DB_HOST
+DEFAULT_PORT = config.ORACLE_DB_PORT
+DEFAULT_SID = config.ORACLE_DB_SID
+DEFAULT_USER = config.ORACLE_DB_USERNAME
+DEFAULT_PASSWORD = config.ORACLE_DB_PASSWORD
 
 
 class OraDB(cx_Oracle.Connection):
