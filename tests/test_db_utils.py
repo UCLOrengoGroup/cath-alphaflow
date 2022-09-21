@@ -4,19 +4,35 @@ import logging
 import cx_Oracle
 
 from cath_alphaflow.db_utils import OraDB
+from cath_alphaflow.settings import get_default_settings
 
 LOG = logging.getLogger(__name__)
 
 
+def test_mock_query(create_mock_query):
+    expected_rows = [["P00520"]]
+    create_mock_query(["uniprot_id"], expected_rows)
+    db = OraDB()
+    rows = list(db.yieldall("select * from foo"))
+    assert rows == expected_rows
+
+
 @mock.patch.object(cx_Oracle, "connect")
-def test_mock_connection(mock_connect):
+def test_mock_connection(mock_connect, mock_settings):
+
+    settings = get_default_settings()
 
     OraDB()
 
     mock_connect.assert_called_with(
-        user="orengoreader",
-        password="orengoreader",
-        dsn="(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=odb.cs.ucl.ac.uk)(PORT=1521))(CONNECT_DATA=(SID=cathora1)))",
+        user=settings.ORACLE_DB_USERNAME,
+        password=settings.ORACLE_DB_PASSWORD,
+        dsn=(
+            f"(DESCRIPTION="
+            f"(ADDRESS=(PROTOCOL=TCP)(HOST={settings.ORACLE_DB_HOST})(PORT={settings.ORACLE_DB_PORT}))"
+            f"(CONNECT_DATA=(SID={settings.ORACLE_DB_SID}))"
+            f")"
+        ),
     )
 
 
