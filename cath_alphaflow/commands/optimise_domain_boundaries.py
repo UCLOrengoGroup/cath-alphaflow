@@ -1,5 +1,8 @@
 import logging
+from pathlib import Path
+
 import click
+
 
 from cath_alphaflow.io_utils import get_af_domain_id_reader
 from cath_alphaflow.io_utils import get_csv_dictwriter
@@ -88,11 +91,13 @@ def optimise_domain_boundaries(
     click.echo("DONE")
 
 
-def calculate_domain_id_post_tailchop(af_domain_id: AFDomainID, af_chain_mmcif_dir):
+def calculate_domain_id_post_tailchop(
+    af_domain_id: AFDomainID, af_chain_mmcif_dir: Path
+):
 
     af_domain_id_post_tailchop = None
 
-    # parse AF2 chopping from original domain id
+    # get mmCIF file (see `models.AFDomainID`)
 
     # process residue coordinates from mmCIF file
 
