@@ -1,7 +1,9 @@
 import logging
 import click
 
-from .create_dataset import commands as create_dataset
+from .commands import create_dataset_uniprot_ids
+from .commands import create_dataset_cath_files
+from .commands import optimise_domain_boundaries
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s"
@@ -25,6 +27,6 @@ def cli(ctx, verbosity):
     )
 
 
-cli.add_command(create_dataset.create_dataset_uniprot_ids)
-
-cli.add_command(create_dataset.create_dataset_cath_files)
+cli.add_command(create_dataset_uniprot_ids.create_dataset_uniprot_ids)
+cli.add_command(create_dataset_cath_files.create_dataset_cath_files)
+cli.add_command(optimise_domain_boundaries.optimise_domain_boundaries)
