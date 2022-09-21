@@ -1,12 +1,12 @@
 import logging
 import cx_Oracle
 
-from cath_alphaflow.config import get_default_config
+from cath_alphaflow.settings import get_default_settings
 from cath_alphaflow.models import PredictedCathDomain
 
 LOG = logging.getLogger(__name__)
 
-config = get_default_config()
+config = get_default_settings()
 
 DEFAULT_HOST = config.ORACLE_DB_HOST
 DEFAULT_PORT = config.ORACLE_DB_PORT
