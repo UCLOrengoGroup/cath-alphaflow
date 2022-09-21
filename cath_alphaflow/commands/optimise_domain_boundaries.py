@@ -2,8 +2,6 @@ import logging
 import click
 
 from cath_alphaflow.io_utils import get_csv_dictreader
-from cath_alphaflow.io_utils import get_uniprot_id_dictreader
-from cath_alphaflow.io_utils import get_uniprot_id_dictwriter
 from cath_alphaflow.io_utils import get_csv_dictwriter
 
 

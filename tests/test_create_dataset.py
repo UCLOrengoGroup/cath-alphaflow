@@ -1,5 +1,3 @@
-import pytest
-
 from click.testing import CliRunner
 from cath_alphaflow.cli import cli
 
