@@ -1,6 +1,7 @@
 import logging
 import click
 
+from .settings import get_default_settings
 from .commands import create_dataset_uniprot_ids
 from .commands import create_dataset_cath_files
 from .commands import optimise_domain_boundaries
@@ -27,6 +28,23 @@ def cli(ctx, verbosity):
     )
 
 
+@click.command()
+def dump_config():
+    """
+    Dump the current settings
+    """
+    settings = get_default_settings()
+    click.echo("Settings:")
+    for key in dir(settings):
+        if key.startswith("__"):
+            continue
+        val = getattr(settings, key)
+        if "PASSWORD" in key:
+            val = "******"
+        click.echo(f"{key} {val}")
+
+
+cli.add_command(dump_config)
 cli.add_command(create_dataset_uniprot_ids.create_dataset_uniprot_ids)
 cli.add_command(create_dataset_cath_files.create_dataset_cath_files)
 cli.add_command(optimise_domain_boundaries.optimise_domain_boundaries)
