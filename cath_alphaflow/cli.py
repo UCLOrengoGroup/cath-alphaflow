@@ -1,10 +1,13 @@
 import logging
 import click
 
+from cath_alphaflow.commands import filter_domains_by_sse
+
 from .settings import get_default_settings
 from .commands import create_dataset_uniprot_ids
 from .commands import create_dataset_cath_files
 from .commands import optimise_domain_boundaries
+from .commands import filter_domains_by_sse
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s"
@@ -48,3 +51,4 @@ cli.add_command(dump_config)
 cli.add_command(create_dataset_uniprot_ids.create_dataset_uniprot_ids)
 cli.add_command(create_dataset_cath_files.create_dataset_cath_files)
 cli.add_command(optimise_domain_boundaries.optimise_domain_boundaries)
+cli.add_command(filter_domains_by_sse.filter_domains_by_sse)
