@@ -147,21 +147,17 @@ def create_dataset_cath_files(
             gene3d_domain_id = entry.gene3d_domain_id
             bitscore = entry.bitscore
             chopping = entry.chopping
-            af_domain_id = AFDomainID.to_str(
-                AFDomainID(
-                    uniprot_acc=uniprot_acc,
-                    fragment_number=fragment_number,
-                    version=af_version,
-                    chopping=Chopping.from_str(chopping_str=chopping),
-                )
-            )
-            af_chain_id = AFChainID.to_str(
-                AFChainID(
-                    uniprot_acc=uniprot_acc,
-                    fragment_number=fragment_number,
-                    version=af_version,
-                )
-            )
+            af_domain_id = AFDomainID(
+                uniprot_acc=uniprot_acc,
+                fragment_number=fragment_number,
+                version=af_version,
+                chopping=Chopping.from_str(chopping_str=chopping),
+            ).to_str()
+            af_chain_id = AFChainID(
+                uniprot_acc=uniprot_acc,
+                fragment_number=fragment_number,
+                version=af_version,
+            ).to_str()
 
             # write data
             csv_uniprot_md5_writer.writerow(
