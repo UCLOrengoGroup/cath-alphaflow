@@ -42,7 +42,7 @@ LOG = logging.getLogger()
 @click.option(
     "--af_dssp_folder",
     "af_dssp_folder",
-    type=click.Path(exists=True, file_okay=True, resolve_path=True),
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True),
     required=True,
     help="Output: DSSP Output Folder",
 )
@@ -67,7 +67,7 @@ def filter_domains_by_sse(
 
 
 def run_process_dssp(af_domain_id, af_chain_mmcif_dir, af_dssp_folder):
-    input_dssp = f"{af_chain_mmcif_dir}/{af_domain_id.to_chain_str()}.cif "
+    input_dssp = f"{af_chain_mmcif_dir}/{af_domain_id.to_chain_str()}.cif"
     output_dssp = f"{af_dssp_folder}/{af_domain_id.to_chain_str()}.dssp"
 
     click.echo(f"Running DSSP: " f"{input_dssp}" f"{output_dssp}")
@@ -81,6 +81,7 @@ def run_process_dssp(af_domain_id, af_chain_mmcif_dir, af_dssp_folder):
         ],
         stderr=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
+        check=True,
     )
     with open(output_dssp, "r") as output_dssp_fh:
         dssp_string = []
