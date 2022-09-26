@@ -17,7 +17,7 @@ def test_chopping_parser():
 
 def test_af_chain_parser():
 
-    assert AFChainID.from_str("AF-P00520-F1-v3") == AFChainID(
+    assert AFChainID.from_str("AF-P00520-F1-model_v3") == AFChainID(
         uniprot_acc="P00520", fragment_number=1, version=3
     )
 
@@ -36,7 +36,7 @@ def test_af_chain_parser():
 
 def test_af_domain_parser():
 
-    assert AFDomainID.from_str("AF-P00520-F1-v3/12-234") == AFDomainID(
+    assert AFDomainID.from_str("AF-P00520-F1-model_v3/12-234") == AFDomainID(
         uniprot_acc="P00520",
         fragment_number=1,
         version=3,

@@ -12,7 +12,7 @@ def test_af_chain_id_reader():
     Check that af_chain_id_reader returns AFChainID objects
     """
 
-    expected_af_chain_ids = ["AF-P00520-F1-v3", "AF-P00521-F1-v3"]
+    expected_af_chain_ids = ["AF-P00520-F1-model_v3", "AF-P00521-F1-model_v3"]
     expected_af_chains = [
         AFChainID.from_str(chain_id) for chain_id in expected_af_chain_ids
     ]
@@ -34,7 +34,10 @@ def test_af_domain_id_reader():
     Check that af_domain_id_reader returns AFDomainID objects
     """
 
-    expected_af_domain_ids = ["AF-P00520-F1-v3/12-345", "AF-P00521-F1-v3/234-456"]
+    expected_af_domain_ids = [
+        "AF-P00520-F1-model_v3/12-345",
+        "AF-P00521-F1-model_v3/234-456",
+    ]
     expected_af_domains = [
         AFDomainID.from_str(domain_id) for domain_id in expected_af_domain_ids
     ]
