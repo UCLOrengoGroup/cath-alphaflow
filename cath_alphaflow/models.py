@@ -105,9 +105,10 @@ class AFDomainID(AFChainID):
                 version=int(match.group("version")),
                 chopping=Chopping.from_str(match.group("chopping")),
             )
-        except KeyError:
-            LOG.error("failed to parse AFDomainId from '%s'", raw_domid)
-            raise
+        except (KeyError, AttributeError):
+            msg = f"failed to parse AFDomainId from {raw_domid}"
+            LOG.error(msg)
+            raise ParseError(msg)
 
         return domid
 
