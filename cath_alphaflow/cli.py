@@ -1,8 +1,6 @@
 import logging
 import click
 
-from cath_alphaflow.commands import filter_domains_by_sse
-
 from .settings import get_default_settings
 from .commands import create_dataset_uniprot_ids
 from .commands import create_dataset_cath_files
