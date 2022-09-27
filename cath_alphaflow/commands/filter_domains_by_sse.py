@@ -1,4 +1,3 @@
-from ast import Raise
 import logging
 from pathlib import Path
 import click
@@ -58,42 +57,64 @@ def filter_domains_by_sse(
         # f"out_file={af_domain_list_post_tailchop_writer.name} ) ..."
     )
     for af_domain_id in af_domain_list_reader:
-        run_process_dssp(
+        run_dssp(
             af_domain_id=af_domain_id,
             af_chain_mmcif_dir=af_chain_mmcif_dir,
             af_dssp_folder=af_dssp_folder,
         )
+        process_dssp(af_domain_id=af_domain_id, af_dssp_folder=af_dssp_folder)
     click.echo("DONE")
 
 
-def run_process_dssp(af_domain_id, af_chain_mmcif_dir, af_dssp_folder):
+def run_dssp(af_domain_id, af_chain_mmcif_dir, af_dssp_folder):
     input_dssp = f"{af_chain_mmcif_dir}/{af_domain_id.to_chain_str()}.cif"
     output_dssp = f"{af_dssp_folder}/{af_domain_id.to_chain_str()}.dssp"
 
-    click.echo(f"Running DSSP: " f"{input_dssp}" f"{output_dssp}")
-    subprocess.run(
-        [
-            DSSP_BINARY_PATH,
-            "--mmcif-dictionary",
-            DSSP_PDB_DICT,
-            f"{af_chain_mmcif_dir}/{af_domain_id.to_chain_str()}.cif",
-            f"{af_dssp_folder}/{af_domain_id.to_chain_str()}.dssp",
-        ],
-        stderr=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        check=True,
-    )
-    with open(output_dssp, "r") as output_dssp_fh:
-        dssp_string = []
-        print(output_dssp_fh)
-        read_file = 0
-        for line in output_dssp_fh:
-            if line.startswith("  #"):
-                read_file = 1
-                continue
-            if read_file == 1:
-                dssp_code = line[16]
-                dssp_string.append(dssp_code)
-        LOG.info(f"{af_domain_id.to_str()} {dssp_string}")
+    click.echo(f"Running DSSP: {input_dssp} {output_dssp}")
+    if Path(input_dssp).exists():
+        subprocess.call(
+            [
+                DSSP_BINARY_PATH,
+                "--mmcif-dictionary",
+                DSSP_PDB_DICT,
+                input_dssp,
+                output_dssp,
+            ],
+            stderr=subprocess.DEVNULL,
+        )
+    else:
+        msg = f"failed to locate AFChainID in {af_chain_mmcif_dir}"
+        LOG.error(msg)
+    return output_dssp
+
+
+def process_dssp(af_domain_id, af_dssp_folder):
+    output_dssp = f"{af_dssp_folder}/{af_domain_id.to_chain_str()}.dssp"
+    if Path(output_dssp).exists():
+        with open(output_dssp, "r") as output_dssp_fh:
+            dssp_string = []
+            read_file = 0
+            domain_length = 0
+            ss_total = 0
+            for line in output_dssp_fh:
+                if line.startswith("  #"):
+                    read_file = 1
+                    continue
+                if read_file == 1:
+                    dssp_code = line[16]
+                    dssp_string.append(dssp_code)
+            for segment in range(len(af_domain_id.chopping.segments)):
+                seg_start = (af_domain_id.chopping.segments[segment].start) - 1
+                seg_end = af_domain_id.chopping.segments[segment].end
+                segment_dssp = dssp_string[seg_start:seg_end]
+                ss_total += segment_dssp.count("H") + segment_dssp.count("E")
+                domain_length += len(segment_dssp)
+            perc_not_in_ss = ((domain_length - ss_total) / domain_length) * 100
+            LOG.info(
+                f"{af_domain_id.to_str()} residues in SS:{ss_total} residues not in SS: {domain_length - ss_total} perc_not_in_SS: {round(perc_not_in_ss,2)}%"
+            )
+    else:
+        msg = f"failed to locate DSSP output in {af_dssp_folder}"
+        LOG.error(msg)
 
     # subprocess.run(["rm", f"{af_dssp_folder}/{af_domain_id.to_chain_str()}.dssp"])
