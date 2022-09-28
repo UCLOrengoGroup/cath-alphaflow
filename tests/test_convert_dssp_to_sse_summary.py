@@ -74,4 +74,10 @@ def test_convert_dssp(tmp_path):
 
         assert got_headers == headers
         assert len(got_rows) == len(rows)
-        assert got_rows == [""]
+        assert got_rows == [
+            "ss_res_total",
+            "res_count",
+            "perc_not_in_ss",
+            "sse_H_num",
+            "sse_E_num",
+        ]
