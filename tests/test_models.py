@@ -4,6 +4,27 @@ from cath_alphaflow.errors import ParseError
 from cath_alphaflow.models import Segment, Chopping, AFChainID, AFDomainID
 
 
+def test_af_ids():
+
+    chain_id = "AF-P00520-F1-model_v3"
+
+    chain = AFChainID.from_str(chain_id)
+    assert f"{chain}" == chain_id
+    assert chain.uniprot_acc == "P00520"
+    with pytest.raises(AttributeError):
+        chain.chopping  # only a domain has a chopping
+    del chain
+
+    dom_id = f"{chain_id}/12-234"
+
+    dom = AFDomainID.from_str(dom_id)
+    assert f"{dom}" == dom_id
+    assert dom.af_domain_id == dom_id
+    assert dom.af_chain_id == chain_id
+    assert dom.chopping.segments == [Segment(start=12, end=234)]
+    del dom
+
+
 def test_chopping_parser():
 
     assert Chopping.from_str("123-456") == Chopping(
