@@ -35,10 +35,6 @@ def get_sse_summary_reader(csvfile):
     next(reader)
     return reader
 
-    ss_res_total: int
-    res_count: int
-    perc_not_in_ss: float
-
 
 def get_sse_summary_writer(csvfile):
     writer = get_csv_dictwriter(
