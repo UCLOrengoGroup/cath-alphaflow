@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 import click
 
@@ -10,9 +9,6 @@ from cath_alphaflow.io_utils import (
 )
 from cath_alphaflow.models import SecStrSummary
 from cath_alphaflow.constants import DEFAULT_DSSP_SUFFIX
-
-
-LOG = logging.getLogger()
 
 
 @click.command()
