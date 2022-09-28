@@ -42,7 +42,14 @@ def get_sse_summary_reader(csvfile):
 
 def get_sse_summary_writer(csvfile):
     writer = get_csv_dictwriter(
-        csvfile, fieldnames=["ss_res_total", "res_count", "perc_not_in_ss"]
+        csvfile,
+        fieldnames=[
+            "ss_res_total",
+            "res_count",
+            "perc_not_in_ss",
+            "sse_H_num",
+            "sse_E_num",
+        ],
     )
     writer.writeheader()
     return writer
