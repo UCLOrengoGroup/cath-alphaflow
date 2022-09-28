@@ -76,6 +76,8 @@ def run_dssp(cif_path: Path, dssp_path: Path):
             DSSP_BINARY_PATH,
             "--mmcif-dictionary",
             DSSP_PDB_DICT,
+            "--output-format",
+            "dssp",
             f"{cif_path}",
             f"{dssp_path}",
         ],
