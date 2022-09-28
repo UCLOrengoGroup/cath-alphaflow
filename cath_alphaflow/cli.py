@@ -37,13 +37,8 @@ def dump_config():
     """
     settings = get_default_settings()
     click.echo("Settings:")
-    for key in dir(settings):
-        if key.startswith("__"):
-            continue
-        val = getattr(settings, key)
-        if "PASSWORD" in key:
-            val = "******"
-        click.echo(f"{key} {val}")
+    for key, val in settings.to_dict().items():
+        click.echo(f"{key:25s} {val}")
 
 
 cli.add_command(dump_config)

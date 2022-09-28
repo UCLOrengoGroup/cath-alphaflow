@@ -13,6 +13,19 @@ class Settings:
     DSSP_BINARY_PATH = config("DSSP_BINARY_PATH", default=None)
     DSSP_PDB_DICT = config("DSSP_PDB_DICT", default=None)
 
+    def to_dict(self):
+        dict = {}
+        for key in dir(self):
+            if key.startswith("__"):
+                continue
+            val = getattr(self, key)
+            if callable(val):
+                continue
+            if "PASSWORD" in key:
+                val = "******"
+            dict[key] = val
+        return dict
+
 
 class ProductionSettings(Settings):
     pass
