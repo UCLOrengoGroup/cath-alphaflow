@@ -30,6 +30,24 @@ def get_uniprot_id_dictwriter(csvfile, **kwargs):
     return writer
 
 
+def get_sse_summary_reader(csvfile):
+    reader = get_csv_dictreader(csvfile)
+    next(reader)
+    return reader
+
+    ss_res_total: int
+    res_count: int
+    perc_not_in_ss: float
+
+
+def get_sse_summary_writer(csvfile):
+    writer = get_csv_dictwriter(
+        csvfile, fieldnames=["ss_res_total", "res_count", "perc_not_in_ss"]
+    )
+    writer.writeheader()
+    return writer
+
+
 class AFDomainIDReader(csv.DictReader):
     def __init__(self, *args):
         self._seen_header = False
@@ -58,6 +76,14 @@ class AFChainIDReader(csv.DictReader):
             return dictrow
         else:
             return AFChainID.from_str(dictrow["af_chain_id"])
+
+
+def yield_first_col(infile, *, header=True):
+    if header:
+        next(infile)
+    for line in infile:
+        first_col = line.split()[0].strip()  # take ID from first column
+        yield first_col
 
 
 def get_af_domain_id_reader(csvfile):

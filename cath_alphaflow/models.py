@@ -121,3 +121,10 @@ class AFDomainID(AFChainID):
 
     def to_str(self):
         return self.af_domain_id
+
+
+@dataclass
+class SecStrSummary:
+    ss_res_total: int
+    res_count: int
+    perc_not_in_ss: float
