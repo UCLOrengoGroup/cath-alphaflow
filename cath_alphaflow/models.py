@@ -81,12 +81,15 @@ class AFChainID:
 
         return chainid
 
-    def to_str(self):
+    @property
+    def af_chain_id(self):
         return f"AF-{self.uniprot_acc}-F{self.fragment_number}-model_v{self.version}"
 
+    def to_str(self):
+        return self.af_chain_id
 
-#    def __str__(self):
-#        return self.to_af_chain_id_str()
+    def __str__(self):
+        return self.to_str()
 
 
 @dataclass
@@ -112,8 +115,9 @@ class AFDomainID(AFChainID):
 
         return domid
 
-    def to_str(self):
-        return f"AF-{self.uniprot_acc}-F{self.fragment_number}-model_v{self.version}/{self.chopping.to_str()}"
+    @property
+    def af_domain_id(self):
+        return self.af_chain_id + "/" + self.chopping.to_str()
 
-    def to_chain_str(self):
-        return f"AF-{self.uniprot_acc}-F{self.fragment_number}-model_v{self.version}"
+    def to_str(self):
+        return self.af_domain_id
