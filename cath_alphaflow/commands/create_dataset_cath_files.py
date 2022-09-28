@@ -1,3 +1,4 @@
+from email.policy import default
 import logging
 import click
 
@@ -5,6 +6,8 @@ from cath_alphaflow.io_utils import get_uniprot_id_dictreader
 from cath_alphaflow.io_utils import get_csv_dictwriter
 from cath_alphaflow.io_utils import chunked_iterable
 from cath_alphaflow.db_utils import OraDB
+from cath_alphaflow.models import Chopping, AFChainID, AFDomainID
+from cath_alphaflow.settings import DEFAULT_AF_VERSION, DEFAULT_AF_FRAGMENT
 
 
 LOG = logging.getLogger()
@@ -57,6 +60,20 @@ DEFAULT_CHUNK_SIZE = 1000
     default=DEFAULT_CHUNK_SIZE,
     help="Param: size of chunk when processing data",
 )
+@click.option(
+    "--version",
+    "af_version",
+    type=str,
+    default=DEFAULT_AF_VERSION,
+    help="AlphaFoldDB version",
+)
+@click.option(
+    "--fragment_number",
+    "fragment_number",
+    type=str,
+    default=DEFAULT_AF_FRAGMENT,
+    help="default fragment number: 1",
+)
 def create_dataset_cath_files(
     csv_uniprot_ids,
     csv_uniprot_md5,
@@ -66,6 +83,8 @@ def create_dataset_cath_files(
     af_cath_annotations,
     gene3d_dbname,
     chunk_size,
+    af_version,
+    fragment_number,
 ):
     "Creates CATH data files for a given dataset"
 
@@ -117,9 +136,7 @@ def create_dataset_cath_files(
 
     # how we are going to process a chunk of uniprot ids
     def process_uniprot_ids(uniprot_ids):
-
         db = OraDB()
-
         for entry in db.next_cath_dataset_entry(
             gene3d_dbname=gene3d_dbname,
             uniprot_ids=uniprot_ids,
@@ -130,8 +147,17 @@ def create_dataset_cath_files(
             gene3d_domain_id = entry.gene3d_domain_id
             bitscore = entry.bitscore
             chopping = entry.chopping
-            af_domain_id = "???"
-            af_chain_id = "???"
+            af_domain_id = AFDomainID(
+                uniprot_acc=uniprot_acc,
+                fragment_number=fragment_number,
+                version=af_version,
+                chopping=Chopping.from_str(chopping_str=chopping),
+            ).to_str()
+            af_chain_id = AFChainID(
+                uniprot_acc=uniprot_acc,
+                fragment_number=fragment_number,
+                version=af_version,
+            ).to_str()
 
             # write data
             csv_uniprot_md5_writer.writerow(

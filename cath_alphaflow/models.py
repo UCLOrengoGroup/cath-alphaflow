@@ -6,11 +6,11 @@ from dataclasses import dataclass
 from .errors import ParseError
 
 RE_AF_CHAIN_ID = re.compile(
-    r"AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9])-v(?P<version>[0-9]+)"
+    r"AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9])-model_v(?P<version>[0-9]+)"
 )
 
 RE_AF_DOMAIN_ID = re.compile(
-    r"AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9])-v(?P<version>[0-9]+)/(?P<chopping>[0-9\-_]+)"
+    r"AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9])-model_v(?P<version>[0-9]+)/(?P<chopping>[0-9\-_]+)"
 )
 
 LOG = logging.getLogger(__name__)
@@ -81,11 +81,15 @@ class AFChainID:
 
         return chainid
 
+    @property
+    def af_chain_id(self):
+        return f"AF-{self.uniprot_acc}-F{self.fragment_number}-model_v{self.version}"
+
     def to_str(self):
-        return f"AF-{self.uniprot_acc}-F{self.fragment_number}-v{self.version}"
+        return self.af_chain_id
 
     def __str__(self):
-        return self.to_af_chain_id_str()
+        return self.to_str()
 
 
 @dataclass
@@ -104,11 +108,25 @@ class AFDomainID(AFChainID):
                 version=int(match.group("version")),
                 chopping=Chopping.from_str(match.group("chopping")),
             )
-        except KeyError:
-            LOG.error("failed to parse AFDomainId from '%s'", raw_domid)
-            raise
+        except (KeyError, AttributeError):
+            msg = f"failed to parse AFDomainId from {raw_domid}"
+            LOG.error(msg)
+            raise ParseError(msg)
 
         return domid
 
+    @property
+    def af_domain_id(self):
+        return self.af_chain_id + "/" + self.chopping.to_str()
+
     def to_str(self):
-        return f"AF-{self.uniprot_acc}-F{self.fragment_number}-v{self.version}/{self.chopping.to_str()}"
+        return self.af_domain_id
+
+
+@dataclass
+class SecStrSummary:
+    ss_res_total: int
+    res_count: int
+    perc_not_in_ss: float
+    sse_H_num: int
+    sse_E_num: int

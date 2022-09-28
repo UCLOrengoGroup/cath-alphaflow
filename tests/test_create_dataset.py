@@ -6,12 +6,6 @@ from cath_alphaflow.cli import cli
 UNIPROT_IDS = ["P00520"]
 
 
-def write_uniprot_ids(fh, uniprot_ids):
-    fh.write("uniprot_id\n")
-    for uniprot_id in uniprot_ids:
-        fh.write(uniprot_id + "\n")
-
-
 def test_cli_usage():
     runner = CliRunner()
     with runner.isolated_filesystem():

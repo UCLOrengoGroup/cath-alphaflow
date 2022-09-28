@@ -1,5 +1,8 @@
 from prettyconf import config
 
+DEFAULT_AF_VERSION = 3
+DEFAULT_AF_FRAGMENT = 1
+
 
 class Settings:
     ORACLE_DB_HOST = config("ORACLE_DB_HOST", default=None)
@@ -7,6 +10,8 @@ class Settings:
     ORACLE_DB_SID = config("ORACLE_DB_SID", default=None)
     ORACLE_DB_USERNAME = config("ORACLE_DB_USERNAME", default=None)
     ORACLE_DB_PASSWORD = config("ORACLE_DB_PASSWORD", default=None)
+    DSSP_BINARY_PATH = config("DSSP_BINARY_PATH", default=None)
+    DSSP_PDB_DICT = config("DSSP_PDB_DICT", default=None)
 
 
 class ProductionSettings(Settings):
