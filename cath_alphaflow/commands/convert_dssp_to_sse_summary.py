@@ -69,9 +69,10 @@ def get_sse_summary_from_dssp(dssp_path, *, chopping=None) -> SecStrSummary:
                 dssp_code = line[16]
                 dssp_string.append(dssp_code)
 
+    segment_dssp = ""
     if chopping:
         for segment in chopping.segments:
-            segment_dssp = dssp_string[(segment.start - 1) : segment.end]
+            segment_dssp += dssp_string[(segment.start - 1) : segment.end]
     else:
         segment_dssp = dssp_string
 
@@ -87,6 +88,8 @@ def get_sse_summary_from_dssp(dssp_path, *, chopping=None) -> SecStrSummary:
         ss_res_total=ss_total,
         res_count=domain_length,
         perc_not_in_ss=perc_not_in_ss,
+        sse_H_num="???",
+        sse_E_num="???",
     )
 
     return ss_sum
