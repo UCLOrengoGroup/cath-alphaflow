@@ -125,8 +125,10 @@ class AFDomainID(AFChainID):
 
 @dataclass
 class SecStrSummary:
+    af_domain_id: str
     ss_res_total: int
     res_count: int
     perc_not_in_ss: float
     sse_H_num: int
     sse_E_num: int
+    sse_num: int
