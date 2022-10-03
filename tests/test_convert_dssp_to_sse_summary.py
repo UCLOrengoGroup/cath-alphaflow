@@ -3,6 +3,7 @@ from pathlib import Path
 import csv
 from click.testing import CliRunner
 from cath_alphaflow.cli import cli
+from cath_alphaflow.models import SecStrSummary
 
 
 UNIPROT_IDS = ["P00520"]
@@ -44,8 +45,8 @@ def test_convert_dssp(tmp_path):
 
     # TODO: fix the last two cols
     expected_rows = [
-        ["313", "1123", "72.12822796081923", "???", "???"],
-        ["313", "1123", "72.12822796081923", "???", "???"],
+        ["id1", "313", "1123", "72.13", "17", "23", "40"],
+        ["id2", "313", "1123", "72.13", "17", "23", "40"],
     ]
 
     runner = CliRunner()
@@ -81,7 +82,7 @@ def test_convert_dssp(tmp_path):
             got_rows = list(csvreader)
 
         assert got_headers == [
-            "af_domain_id"
+            "af_domain_id",
             "ss_res_total",
             "res_count",
             "perc_not_in_ss",
@@ -91,3 +92,20 @@ def test_convert_dssp(tmp_path):
         ]
         assert len(got_rows) == len(ids)
         assert got_rows == expected_rows
+
+
+def test_sse_summary():
+    test_dssp_str = "HHHHHHHHEEEEEEEHEHEEEEEIIIIIIIIIIIEEH"
+    sss = SecStrSummary.new_from_dssp_str(
+        test_dssp_str,
+        acc_id="test1",
+    )
+    assert sss.to_dict() == {
+        "af_domain_id": "test1",
+        "ss_res_total": len(test_dssp_str) - 11,
+        "res_count": len(test_dssp_str),
+        "perc_not_in_ss": round((100 * 11) / len(test_dssp_str), 2),
+        "sse_H_num": 1,
+        "sse_E_num": 2,
+        "sse_num": 3,
+    }
