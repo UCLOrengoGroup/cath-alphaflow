@@ -40,11 +40,13 @@ def get_sse_summary_writer(csvfile):
     writer = get_csv_dictwriter(
         csvfile,
         fieldnames=[
+            "af_domain_id",
             "ss_res_total",
             "res_count",
             "perc_not_in_ss",
             "sse_H_num",
             "sse_E_num",
+            "sse_num",
         ],
     )
     writer.writeheader()
