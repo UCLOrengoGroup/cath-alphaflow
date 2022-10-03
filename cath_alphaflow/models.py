@@ -4,6 +4,7 @@ from typing import List
 from dataclasses import dataclass
 
 from .errors import ParseError
+from .constants import DEFAULT_HELIX_MIN_LENGTH, DEFAULT_STRAND_MIN_LENGTH
 
 RE_AF_CHAIN_ID = re.compile(
     r"AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9])-model_v(?P<version>[0-9]+)"
@@ -131,4 +132,65 @@ class SecStrSummary:
     perc_not_in_ss: float
     sse_H_num: int
     sse_E_num: int
-    sse_num: int
+
+    @property
+    def sse_num(self):
+        return self.sse_E_num + self.sse_H_num
+
+    def to_dict(self):
+        d = self.__dict__
+        d["sse_num"] = self.sse_num
+        return d
+
+    @classmethod
+    def new_from_dssp_str(
+        cls,
+        dssp_str,
+        acc_id,
+        *,
+        min_helix_length=DEFAULT_HELIX_MIN_LENGTH,
+        min_strand_length=DEFAULT_STRAND_MIN_LENGTH,
+    ):
+        # Calculate percentage of residues in secondary structures
+        ss_total = dssp_str.count("H") + dssp_str.count("E")
+        domain_length = len(dssp_str)
+        if domain_length == 0:
+            msg = f"failed to find any SS data in DSSP string '{dssp_str}'"
+            raise ParseError(msg)
+        else:
+            perc_not_in_ss = round(
+                ((domain_length - ss_total) / domain_length) * 100, 2
+            )
+
+        # Calculate number of SSEs
+        sse_H_num = sse_H_res = sse_E_num = sse_E_res = 0
+        sse_H = sse_E = False
+
+        # Calculate number of alpha helices and beta strands
+        for residue in dssp_str:
+            if residue == "H":
+                sse_H_res += 1
+                if sse_H_res >= min_helix_length and sse_H == False:
+                    sse_H = True
+                    sse_H_num += 1
+
+            if residue == "E":
+                sse_E_res += 1
+                if sse_E_res >= min_strand_length and sse_E == False:
+                    sse_E = True
+                    sse_E_num += 1
+
+            if residue != "H" and residue != "E":
+                sse_H = sse_E = False
+                sse_H_res = sse_E_res = 0
+
+        ss_sum = SecStrSummary(
+            af_domain_id=acc_id,
+            ss_res_total=ss_total,
+            res_count=domain_length,
+            perc_not_in_ss=perc_not_in_ss,
+            sse_H_num=sse_H_num,
+            sse_E_num=sse_E_num,
+        )
+
+        return ss_sum
