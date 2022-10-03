@@ -46,7 +46,7 @@ def convert_dssp_to_sse_summary(dssp_dir, id_file, sse_out_file, dssp_suffix):
     sse_out_writer = get_sse_summary_writer(sse_out_file)
 
     for file_stub in yield_first_col(id_file):
-        print(file_stub)
+        click.echo(file_stub)
         dssp_path = Path(dssp_dir) / f"{file_stub}{dssp_suffix}"
         ss_sum = get_sse_summary_from_dssp(dssp_path)
         sse_out_writer.writerow(ss_sum.__dict__)
