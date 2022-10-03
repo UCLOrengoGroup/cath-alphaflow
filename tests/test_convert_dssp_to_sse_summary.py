@@ -81,11 +81,13 @@ def test_convert_dssp(tmp_path):
             got_rows = list(csvreader)
 
         assert got_headers == [
+            "af_domain_id"
             "ss_res_total",
             "res_count",
             "perc_not_in_ss",
             "sse_H_num",
             "sse_E_num",
+            "sse_num",
         ]
         assert len(got_rows) == len(ids)
         assert got_rows == expected_rows
