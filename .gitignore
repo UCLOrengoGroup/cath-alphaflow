@@ -143,4 +143,4 @@ dataset10k*
 config.env
 
 # VSCode
-settings.json
+.vscode/settings.json
