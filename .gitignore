@@ -141,3 +141,6 @@ work/
 .nextflow.log.*
 dataset10k*
 config.env
+
+# VSCode
+.vscode/settings.json
