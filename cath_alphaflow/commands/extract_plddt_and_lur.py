@@ -76,8 +76,8 @@ def get_average_plddt_from_plddt_string(
     if chopping:
         for segment in chopping.segments:
             segment_plddt += plddt_string[(segment.start - 1) : segment.end]
-            domain_length = len(segment_plddt)
-            average_plddt = round((sum(segment_plddt) / domain_length) * 100, 2)
+        domain_length = len(segment_plddt)
+        average_plddt = round((sum(segment_plddt) / domain_length) * 100, 2)
 
     else:
         average_plddt = chain_plddt
