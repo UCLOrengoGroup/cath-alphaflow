@@ -7,8 +7,8 @@ import click
 
 from cath_alphaflow.io_utils import get_af_domain_id_reader
 from cath_alphaflow.io_utils import get_csv_dictwriter
-from cath_alphaflow.models import AFDomainID
-
+from cath_alphaflow.models import AFDomainID, Segment
+from cath_alphaflow.errors import OutOfSegmentError
 
 LOG = logging.getLogger()
 
@@ -102,36 +102,52 @@ def optimise_domain_boundaries(
 
     click.echo("DONE")
 
-def cut_boundary(structure,boundary_to_cut,cutoff_plddt_score,cut_start,cut_end):
+
+def get_local_plddt_for_res(
+    structure,
+    residue_num: int,
+    *,
+    model_num: int = 0,
+    chain_id: str = "A",
+    atom_type: str = "CA",
+):
+    """
+    Returns the local pLDDT score for a given residue
+    """
+    return structure[model_num][chain_id][residue_num][atom_type].get_bfactor()
+
+
+def cut_segment(
+    structure, segment_to_cut: Segment, cutoff_plddt_score, cut_start, cut_end
+) -> Segment:
     # Cuts one boundary based on the cutoff_plddt_score and returns the reduced boundary
-    new_boundary=''
-    boundary_lower_value = int(boundary_to_cut.split('-')[0])
-    boundary_higher_value = int(boundary_to_cut.split('-')[1])
-    new_boundary_lower_value = boundary_lower_value
-    new_boundary_higher_value = boundary_higher_value
+
+    new_boundary_lower_value = boundary_lower_value = segment_to_cut.start
+    new_boundary_higher_value = boundary_higher_value = segment_to_cut.end
 
     if cut_start:
-        for res in range(boundary_lower_value,boundary_higher_value):
-            if structure[0]["A"][res]["CA"].get_bfactor() > cutoff_plddt_score:
+        for res in range(boundary_lower_value, boundary_higher_value):
+            local_plddt = get_local_plddt_for_res(structure, res)
+            if local_plddt > cutoff_plddt_score:
                 break
-            else:
-                new_boundary_lower_value += 1
-                if new_boundary_lower_value == new_boundary_higher_value:
-                    return('NaN')
+            if new_boundary_lower_value == new_boundary_higher_value:
+                raise ValueError("lower and higher segment values match")
 
+            new_boundary_lower_value = res
 
     if cut_end:
-        for res in range(boundary_higher_value,boundary_lower_value, -1):
-            if structure[0]["A"][res]["CA"].get_bfactor() > cutoff_plddt_score:
+        for res in range(boundary_higher_value, boundary_lower_value, -1):
+            local_plddt = get_local_plddt_for_res(structure, res)
+            if local_plddt > cutoff_plddt_score:
                 break
-            else:
-                new_boundary_higher_value -= 1
-                if new_boundary_higher_value == new_boundary_lower_value:
-                    return('NaN')
-                
+            if new_boundary_higher_value == new_boundary_lower_value:
+                raise ValueError("lower and higher segment values match")
 
-    if (new_boundary_higher_value - new_boundary_lower_value) + 0:
-        new_boundary=str(new_boundary_lower_value)+"-"+str(new_boundary_higher_value)
+            new_boundary_higher_value = res
+
+    new_boundary = Segment(
+        start=str(new_boundary_lower_value), end=str(new_boundary_higher_value)
+    )
 
     return new_boundary
 
