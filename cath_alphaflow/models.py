@@ -194,3 +194,10 @@ class SecStrSummary:
         )
 
         return ss_sum
+
+
+@dataclass
+class pLDDTSummary:
+    af_domain_id: str
+    avg_plddt: float
+    perc_LUR: float
