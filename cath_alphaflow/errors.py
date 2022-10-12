@@ -4,3 +4,7 @@ class BaseError(BaseException):
 
 class ParseError(BaseError):
     pass
+
+
+class NoMatchingResiduesError(BaseError):
+    pass
