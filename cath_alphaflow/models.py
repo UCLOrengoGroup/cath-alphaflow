@@ -1,7 +1,7 @@
 import logging
 import re
 from typing import List
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 
 from .errors import ParseError
 from .constants import DEFAULT_HELIX_MIN_LENGTH, DEFAULT_STRAND_MIN_LENGTH
@@ -28,12 +28,16 @@ class PredictedCathDomain:
     gene3d_domain_id: str
     bitscore: float
     chopping: str
+    indp_evalue: float
 
 
 @dataclass
 class Segment:
     start: str
     end: str
+
+    def deep_copy(self):
+        return Segment(start=self.start, end=self.end)
 
 
 @dataclass
@@ -58,6 +62,10 @@ class Chopping:
 
     def to_str(self):
         return "_".join([f"{seg.start}-{seg.end}" for seg in self.segments])
+
+    def deep_copy(self):
+        new_segments = [s.deep_copy() for s in self.segments]
+        return Chopping(segments=new_segments)
 
 
 @dataclass
@@ -92,6 +100,9 @@ class AFChainID:
     def __str__(self):
         return self.to_str()
 
+    def deep_copy(self):
+        return AFChainID(asdict(self))
+
 
 @dataclass
 class AFDomainID(AFChainID):
@@ -122,6 +133,11 @@ class AFDomainID(AFChainID):
 
     def to_str(self):
         return self.af_domain_id
+
+    def deep_copy(self):
+        flds = asdict(self)
+        flds["chopping"] = self.chopping.deep_copy()
+        return AFDomainID(**flds)
 
 
 @dataclass
