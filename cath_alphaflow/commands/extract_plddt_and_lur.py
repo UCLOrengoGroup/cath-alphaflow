@@ -1,4 +1,5 @@
 from pathlib import Path
+import gzip
 from Bio.PDB import MMCIF2Dict
 import logging
 import click
@@ -66,37 +67,51 @@ def convert_cif_to_plddt_summary(
 
 def get_average_plddt_from_plddt_string(
     cif_path: Path, *, chopping=None, acc_id=None
-) -> pLDDTSummary:
+) -> float:
     if acc_id is None:
         acc_id = cif_path.stem
-    mmcif_dict = MMCIF2Dict.MMCIF2Dict(cif_path)
+    open_func = open
+    if cif_path.name.endswith(".gz"):
+        open_func = gzip.open
+    with open_func(str(cif_path), mode="rt") as cif_fh:
+        mmcif_dict = MMCIF2Dict.MMCIF2Dict(cif_fh)
     chain_plddt = mmcif_dict["_ma_qa_metric_global.metric_value"][0]
-    plddt_string = mmcif_dict["_ma_qa_metric_local.metric_value"]
-    segment_plddt = ""
+    plddt_strings = mmcif_dict["_ma_qa_metric_local.metric_value"]
+    chopping_plddt = []
     if chopping:
         for segment in chopping.segments:
-            segment_plddt += plddt_string[(segment.start - 1) : segment.end]
-        domain_length = len(segment_plddt)
-        average_plddt = round((sum(segment_plddt) / domain_length) * 100, 2)
+            segment_plddt = [
+                float(plddt)
+                for plddt in plddt_strings[int(segment.start) - 1 : int(segment.end)]
+            ]
+            chopping_plddt += segment_plddt
+        domain_length = len(chopping_plddt)
+        average_plddt = round((sum(chopping_plddt) / domain_length), 2)
 
     else:
         average_plddt = chain_plddt
     return average_plddt
 
 
-def get_LUR_residues_percentage(
-    cif_path: Path, *, chopping=None, acc_id=None
-) -> pLDDTSummary:
+def get_LUR_residues_percentage(cif_path: Path, *, chopping=None, acc_id=None):
     if acc_id is None:
         acc_id = cif_path.stem
-    mmcif_dict = MMCIF2Dict.MMCIF2Dict(cif_path)
-    plddt_string = mmcif_dict["_ma_qa_metric_local.metric_value"]
-    segment_plddt = ""
+    open_func = open
+    if cif_path.name.endswith(".gz"):
+        open_func = gzip.open
+    with open_func(str(cif_path), mode="rt") as cif_fh:
+        mmcif_dict = MMCIF2Dict.MMCIF2Dict(cif_fh)
+    plddt_strings = mmcif_dict["_ma_qa_metric_local.metric_value"]
+    chopping_plddt = []
     if chopping:
         for segment in chopping.segments:
-            segment_plddt += plddt_string[(segment.start - 1) : segment.end]
+            segment_plddt = [
+                float(plddt)
+                for plddt in plddt_strings[int(segment.start) - 1 : int(segment.end)]
+            ]
+            chopping_plddt += segment_plddt
     else:
-        segment_plddt = plddt_string
+        segment_plddt = plddt_strings
     # Calculate LUR
     LUR_perc = 0
     LUR_total = 0
@@ -105,7 +120,7 @@ def get_LUR_residues_percentage(
     min_res_lur = MIN_LENGTH_LUR
     for residue in segment_plddt:
         plddt_res = float(residue)
-        if plddt_res < 90:
+        if plddt_res < 70:
             LUR_res += 1
             if LUR_stretch == True:
                 LUR_total += 1
@@ -119,4 +134,4 @@ def get_LUR_residues_percentage(
             LUR_res = 0
     LUR_perc = round(LUR_total / len(segment_plddt) * 100, 2)
 
-    return LUR_perc
+    return LUR_perc, LUR_total, len(segment_plddt)
