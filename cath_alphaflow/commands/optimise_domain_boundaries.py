@@ -164,33 +164,70 @@ def cut_segment(
     return new_segment
 
 
-def cut_first_boundary(structure,boundaries,cutoff_plddt_score):
+def cut_chopping_start(
+    structure, chopping: Chopping, cutoff_plddt_score: float
+) -> Chopping:
     # Cut from the start of the first boundary until a residue has a pLDDT score > cutoff_plddt_score
-    new_boundary = cut_boundary(structure,boundaries[0],cutoff_plddt_score,cut_start=True,cut_end=False)
-    if new_boundary == 'NaN':
-        boundaries.remove(boundaries[0])
-        if len(boundaries) == 0:
-            return []
-        else:
-            cut_first_boundary(structure,boundaries,cutoff_plddt_score)
-    else:
-        boundaries[0] = new_boundary
-        return boundaries
+
+    # take a copy so we don't change existing data
+    new_segments = chopping.deep_copy().segments
+    start_segment = None
+
+    while start_segment is None:
+        try:
+            start_segment = cut_segment(
+                structure,
+                new_segments[0],
+                cutoff_plddt_score,
+                cut_start=True,
+                cut_end=False,
+            )
+            # success, replace with new segment
+            new_segments[0] = start_segment
+        except NoMatchingResiduesError:
+            # go to the next segment
+            new_segments.remove(new_segments[0])
+            if len(new_segments) == 0:
+                break
+
+    if start_segment is None:
+        msg = f"failed to get new start segment with chopping {chopping}"
+        raise NoMatchingResiduesError(msg)
+
+    return Chopping(segments=new_segments)
 
 
-def cut_last_boundary(structure,boundaries,cutoff_plddt_score):
+def cut_chopping_end(
+    structure, chopping: Chopping, cutoff_plddt_score: float
+) -> Chopping:
     # Cut from the end of the last boundary until a residue has a pLDDT score > cutoff_plddt_score
-    new_boundary = cut_boundary(structure,boundaries[-1],cutoff_plddt_score,cut_start=False,cut_end=True)
-    if new_boundary == 'NaN':
-        boundaries.remove(boundaries[-1])
-        if len(boundaries) == 1:
-            return boundaries
-        else:
-            cut_last_boundary(structure,boundaries,cutoff_plddt_score)
-    else:
-        boundaries[0] = new_boundary
-        return boundaries
 
+    # take a copy so we don't change existing data
+    new_segments = chopping.deep_copy().segments
+    end_segment = None
+
+    while end_segment is None:
+        try:
+            end_segment = cut_segment(
+                structure,
+                new_segments[-1],
+                cutoff_plddt_score,
+                cut_start=False,
+                cut_end=True,
+            )
+            # success, replace with new segment
+            new_segments[-1] = end_segment
+        except NoMatchingResiduesError:
+            # go to the next segment
+            new_segments.remove(new_segments[-1])
+            if len(new_segments) == 0:
+                break
+
+    if end_segment is None:
+        msg = f"failed to get new end segment with chopping {chopping}"
+        raise NoMatchingResiduesError(msg)
+
+    return Chopping(segments=new_segments)
 
 
 def calculate_domain_id_post_tailchop(
