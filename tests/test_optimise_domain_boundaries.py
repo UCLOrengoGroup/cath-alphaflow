@@ -8,7 +8,7 @@ from cath_alphaflow.cli import cli
 from cath_alphaflow.commands.optimise_domain_boundaries import (
     calculate_domain_id_post_tailchop,
 )
-from cath_alphaflow.models import AFDomainID, AFChainID
+from cath_alphaflow.models import AFDomainID
 
 
 UNIPROT_IDS = ["P00520"]
@@ -41,6 +41,7 @@ def create_fake_cif_dir(dirname, ids, cif_src=EXAMPLE_CIF_FILE):
         dir_path.mkdir()
     for _id in ids:
         cif_path_dest = dir_path / f"{_id}.cif.gz"
+        # print(f"Creating symbolic link for test file {cif_src} -> {cif_path_dest}")
         os.symlink(cif_src, f"{cif_path_dest}")
     return dir_path
 
@@ -48,28 +49,32 @@ def create_fake_cif_dir(dirname, ids, cif_src=EXAMPLE_CIF_FILE):
 def test_optimise_domain_boundaries(tmp_path):
 
     headers = ["header"]
-    chain_ids = ["AF-P00520-F1-model_v3"]
+    chain_ids = ["AF-P00520-F1-model_v3", "AF-P00521-F1-model_v3"]
     af_domain_ids = [
         "AF-P00520-F1-model_v3/1-100",
-        "AF-P00521-F1-model_v3/200-250",
+        "AF-P00521-F1-model_v3/800-1123",
+    ]
+    # TODO: manually check that these results are correct...
+    new_af_domain_ids = [
+        "AF-P00520-F1-model_v3/61-100",
+        "AF-P00521-F1-model_v3/1018-1123",
     ]
     expected_mapping_rows = [
-        ["AF-P00520-F1-model_v3/1-100", "AF-P00520-F1-model_v3/5-95"],
-        ["AF-P00520-F1-model_v3/200-250", "AF-P00520-F1-model_v3/205-245"],
+        [row[0], row[1]] for row in zip(af_domain_ids, new_af_domain_ids)
     ]
 
     runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path):
+    with runner.isolated_filesystem(temp_dir=tmp_path) as td:
 
-        cwd_path = Path.cwd()
+        _dir = Path(f"{td}")
 
-        tmp_cif_path = create_fake_cif_dir("cif", chain_ids)
-        tmp_id_path = cwd_path / "ids.csv"
+        tmp_cif_path = create_fake_cif_dir(_dir / "cif", chain_ids)
+        tmp_id_path = _dir / "ids.csv"
         with tmp_id_path.open("wt") as fh:
             write_ids_to_file(fh, headers, af_domain_ids)
 
-        tmp_list_post_chop_path = cwd_path / "domain_list_post_tailchop.csv"
-        tmp_mapping_post_chop_path = cwd_path / "domain_mapping_post_tailchop.csv"
+        tmp_list_post_chop_path = _dir / "domain_list_post_tailchop.csv"
+        tmp_mapping_post_chop_path = _dir / "domain_mapping_post_tailchop.csv"
 
         args = (
             SUBCOMMAND,
@@ -82,14 +87,20 @@ def test_optimise_domain_boundaries(tmp_path):
             "--af_domain_mapping_post_tailchop",
             f"{tmp_mapping_post_chop_path}",
         )
+        # print(f"Running: cath-af-cli {' '.join(args)}")
         result = runner.invoke(cli, args)
         assert result.exit_code == 0
         assert "DONE" in result.output
 
-        assert_csv_matches(tmp_list_post_chop_path, ["af_domain_id"], af_domain_ids)
         assert_csv_matches(
             tmp_list_post_chop_path,
-            ["af_domain_id", "af_domain_id_post_tailchop"],
+            ["af_domain_id"],
+            # convert list of ids to list of list of ids (ie csv rows)
+            [[_id] for _id in new_af_domain_ids],
+        )
+        assert_csv_matches(
+            tmp_mapping_post_chop_path,
+            ["af_domain_id_orig", "af_domain_id_post_tailchop"],
             expected_mapping_rows,
         )
 
