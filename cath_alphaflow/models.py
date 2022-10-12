@@ -28,7 +28,6 @@ class PredictedCathDomain:
     gene3d_domain_id: str
     bitscore: float
     chopping: str
-    indp_evalue: float
 
 
 @dataclass
