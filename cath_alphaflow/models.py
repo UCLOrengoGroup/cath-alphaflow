@@ -201,3 +201,5 @@ class pLDDTSummary:
     af_domain_id: str
     avg_plddt: float
     perc_LUR: float
+    LUR_residues: int
+    total_residues: int
