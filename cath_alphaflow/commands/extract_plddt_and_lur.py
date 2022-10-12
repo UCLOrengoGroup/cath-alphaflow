@@ -113,7 +113,7 @@ def get_LUR_residues_percentage(cif_path: Path, *, chopping=None, acc_id=None):
             ]
             chopping_plddt += segment_plddt
     else:
-        segment_plddt = plddt_strings
+        chopping_plddt = plddt_strings
     # Calculate LUR
     LUR_perc = 0
     LUR_total = 0
@@ -134,8 +134,8 @@ def get_LUR_residues_percentage(cif_path: Path, *, chopping=None, acc_id=None):
         else:
             LUR_stretch = False
             LUR_res = 0
-    LUR_perc = round(LUR_total / len(segment_plddt) * 100, 2)
+    LUR_perc = round(LUR_total / len(chopping_plddt) * 100, 2)
 
     return LURSummary(
-        LUR_perc=LUR_perc, LUR_total=LUR_total, residues_total=len(segment_plddt)
+        LUR_perc=LUR_perc, LUR_total=LUR_total, residues_total=len(chopping_plddt)
     )

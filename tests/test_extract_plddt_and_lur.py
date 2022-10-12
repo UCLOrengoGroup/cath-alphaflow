@@ -82,7 +82,7 @@ def test_extract_LUR_summary(tmp_path):
     )
 
     assert lur_summary == LURSummary(
-        LUR_perc=57.87,
+        LUR_perc=47.55,
         LUR_total=533,
         residues_total=get_total_residues_from_chopping(chopping),
     )
