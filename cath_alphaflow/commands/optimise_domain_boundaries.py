@@ -232,28 +232,38 @@ def cut_chopping_end(
 
 def calculate_domain_id_post_tailchop(
     af_domain_id: AFDomainID, af_chain_mmcif_dir: Path, cutoff_plddt_score: int
-):
+) -> AFDomainID:
     af_domain_id_post_tailchop = None
 
-    up_id = str(af_domain_id).split('/')[0]
-    old_boundaries = str(af_domain_id).split('/')[1].split('_')
-    structure = MMCIFParser(QUIET=1).get_structure('struc',af_chain_mmcif_dir+'/'+up_id+'.cif')
-    if len(old_boundaries) == 1:
+    up_id = str(af_domain_id.af_chain_id)
+    old_chopping = af_domain_id.chopping
+    structure = MMCIFParser(QUIET=1).get_structure(
+        "struc", af_chain_mmcif_dir + "/" + up_id + ".cif"
+    )
+    if len(old_chopping.segments) == 1:
         # For single region domains just cut the one region
-        new_boundary = cut_boundary(structure,old_boundaries[0],cutoff_plddt_score,cut_start=True,cut_end=True)
-        af_domain_id_post_tailchop=up_id+'/'+new_boundary
+        new_boundary = cut_segment(
+            structure,
+            old_chopping.segments[0],
+            cutoff_plddt_score,
+            cut_start=True,
+            cut_end=True,
+        )
+        af_domain_id_post_tailchop = up_id + "/" + new_boundary
         return af_domain_id_post_tailchop
     else:
         # For contigs, only cut the outer most parts and leave everything in the middle intact
-        # We do this by first cutting from the start and then from the end. 
-        cut_first_boundary(structure,old_boundaries,cutoff_plddt_score)
-        if len(old_boundaries) == 0:
-            return up_id+'/NaN'
-        cut_last_boundary(structure,old_boundaries,cutoff_plddt_score)
-        if len(old_boundaries) == 0:
-            return up_id+'/NaN'
+        # We do this by first cutting from the start and then from the end.
 
-        af_domain_id_post_tailchop=up_id+'/'+"_".join(str(boundary) for boundary in old_boundaries)
+        # make a copy so we can keep the old chopping for comparison
+        new_chopping = old_chopping.deep_copy()
+        # adjust the start of the new chopping
+        new_chopping = cut_chopping_start(structure, new_chopping, cutoff_plddt_score)
+        # adjust the end of the new chopping
+        new_chopping = cut_chopping_end(structure, new_chopping, cutoff_plddt_score)
+
+        # create a new AF domain id with the new chopping
+        af_domain_id_post_tailchop = af_domain_id.deep_copy()
+        af_domain_id_post_tailchop.chopping = new_chopping
 
         return af_domain_id_post_tailchop
-
