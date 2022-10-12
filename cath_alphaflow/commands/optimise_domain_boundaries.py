@@ -7,8 +7,8 @@ import click
 
 from cath_alphaflow.io_utils import get_af_domain_id_reader
 from cath_alphaflow.io_utils import get_csv_dictwriter
-from cath_alphaflow.models import AFDomainID, Segment
-from cath_alphaflow.errors import OutOfSegmentError
+from cath_alphaflow.models import AFDomainID, Segment, Chopping
+from cath_alphaflow.errors import NoMatchingResiduesError
 
 LOG = logging.getLogger()
 
@@ -62,8 +62,6 @@ def optimise_domain_boundaries(
 ):
     "Adjusts the domain boundaries of AF2 by removing unpacked tails"
 
-
-
     af_domain_list_reader = get_af_domain_id_reader(af_domain_list)
 
     af_domain_list_post_tailchop_writer = get_csv_dictwriter(
@@ -83,7 +81,7 @@ def optimise_domain_boundaries(
         f"out_file={af_domain_list_post_tailchop.name} ) ..."
     )
     for af_domain_id in af_domain_list_reader:
-        print(af_domain_id)
+        click.echo(f"Working on: {af_domain_id} ...")
 
         af_domain_id_post_tailchop = calculate_domain_id_post_tailchop(
             af_domain_id, af_chain_mmcif_dir, cutoff_plddt_score
@@ -125,31 +123,45 @@ def cut_segment(
     new_boundary_lower_value = boundary_lower_value = segment_to_cut.start
     new_boundary_higher_value = boundary_higher_value = segment_to_cut.end
 
+    exception_info = (
+        f"(structure: {structure}, start:{boundary_lower_value}"
+        f", end:{boundary_higher_value}, cutoff:{cutoff_plddt_score})"
+    )
+
     if cut_start:
         for res in range(boundary_lower_value, boundary_higher_value):
             local_plddt = get_local_plddt_for_res(structure, res)
             if local_plddt > cutoff_plddt_score:
                 break
-            if new_boundary_lower_value == new_boundary_higher_value:
-                raise ValueError("lower and higher segment values match")
-
             new_boundary_lower_value = res
+        else:
+            # this only runs if we haven't already broken out of the loop
+            msg = (
+                f"failed to find residues over plddt cutoff from start {exception_info}"
+            )
+            raise NoMatchingResiduesError(msg)
 
     if cut_end:
         for res in range(boundary_higher_value, boundary_lower_value, -1):
             local_plddt = get_local_plddt_for_res(structure, res)
             if local_plddt > cutoff_plddt_score:
                 break
-            if new_boundary_higher_value == new_boundary_lower_value:
-                raise ValueError("lower and higher segment values match")
 
             new_boundary_higher_value = res
+        else:
+            # this only runs if we haven't already broken out of the loop
+            msg = f"failed to find residues over plddt cutoff from end {exception_info}"
+            raise NoMatchingResiduesError(msg)
 
-    new_boundary = Segment(
+    if new_boundary_higher_value == new_boundary_lower_value:
+        msg = f"matching new boundary start/end ({new_boundary_higher_value}) {exception_info}"
+        raise NoMatchingResiduesError(msg)
+
+    new_segment = Segment(
         start=str(new_boundary_lower_value), end=str(new_boundary_higher_value)
     )
 
-    return new_boundary
+    return new_segment
 
 
 def cut_first_boundary(structure,boundaries,cutoff_plddt_score):
