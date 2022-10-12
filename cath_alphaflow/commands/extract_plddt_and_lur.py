@@ -7,7 +7,7 @@ from cath_alphaflow.io_utils import (
     yield_first_col,
     get_plddt_summary_writer,
 )
-from cath_alphaflow.models import pLDDTSummary
+from cath_alphaflow.models import LURSummary, pLDDTSummary
 from cath_alphaflow.constants import MIN_LENGTH_LUR
 
 LOG = logging.getLogger()
@@ -56,9 +56,11 @@ def convert_cif_to_plddt_summary(
             raise FileNotFoundError(msg)
 
         avg_plddt = get_average_plddt_from_plddt_string(cif_path)
-        perc_LUR = get_LUR_residues_percentage(cif_path)
+        perc_LUR_summary = get_LUR_residues_percentage(cif_path)
         plddt_stats = pLDDTSummary(
-            af_domain_id=file_stub, avg_plddt=avg_plddt, perc_LUR=perc_LUR
+            af_domain_id=file_stub,
+            avg_plddt=avg_plddt,
+            perc_LUR=perc_LUR_summary.LUR_perc,
         )
         plddt_out_writer.writerow(plddt_stats.__dict__)
 
@@ -122,10 +124,10 @@ def get_LUR_residues_percentage(cif_path: Path, *, chopping=None, acc_id=None):
         plddt_res = float(residue)
         if plddt_res < 70:
             LUR_res += 1
-            if LUR_stretch == True:
+            if LUR_stretch:
                 LUR_total += 1
 
-            if LUR_res == min_res_lur and LUR_stretch == False:
+            if LUR_res == min_res_lur and not LUR_stretch:
                 LUR_stretch = True
                 LUR_total += min_res_lur
 
@@ -134,4 +136,6 @@ def get_LUR_residues_percentage(cif_path: Path, *, chopping=None, acc_id=None):
             LUR_res = 0
     LUR_perc = round(LUR_total / len(segment_plddt) * 100, 2)
 
-    return LUR_perc, LUR_total, len(segment_plddt)
+    return LURSummary(
+        LUR_perc=LUR_perc, LUR_total=LUR_total, residues_total=len(segment_plddt)
+    )

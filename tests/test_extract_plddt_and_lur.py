@@ -1,14 +1,12 @@
 import os
 from pathlib import Path
-import csv
-from symbol import comp_if
 from click.testing import CliRunner
 from cath_alphaflow.cli import cli
 from cath_alphaflow.commands.extract_plddt_and_lur import (
     get_average_plddt_from_plddt_string,
     get_LUR_residues_percentage,
 )
-from cath_alphaflow.models import Chopping, SecStrSummary, Segment
+from cath_alphaflow.models import Chopping, LURSummary, Segment
 
 
 UNIPROT_IDS = ["P00520"]
@@ -55,17 +53,38 @@ def test_extract_plddt_summary(tmp_path):
     assert average_plddt == 32.88
 
 
+def get_total_residues_from_chopping(chopping):
+    return sum([int(seg.end) - int(seg.start) + 1 for seg in chopping.segments])
+
+
 def test_extract_LUR_summary(tmp_path):
     acc_id = "test1"
     cif_path = create_fake_cif_path(tmp_path.name, acc_id)
     chopping = Chopping(segments=[Segment("10", "20")])
 
-    LUR = get_LUR_residues_percentage(cif_path, chopping=chopping, acc_id=acc_id)
+    lur_summary = get_LUR_residues_percentage(
+        cif_path, chopping=chopping, acc_id=acc_id
+    )
 
-    assert LUR == (100.0, 11, 11)
+    assert lur_summary == LURSummary(
+        LUR_perc=100.0,
+        LUR_total=11,
+        residues_total=get_total_residues_from_chopping(chopping),
+    )
+    # clean up after test
+    del chopping
+    del lur_summary
 
     chopping = Chopping(segments=[Segment("1", "200"), Segment("200", "1120")])
 
-    LUR = get_LUR_residues_percentage(cif_path, chopping=chopping, acc_id=acc_id)
+    lur_summary = get_LUR_residues_percentage(
+        cif_path, chopping=chopping, acc_id=acc_id
+    )
 
-    assert LUR == (57.87, 533, 921)
+    assert lur_summary == LURSummary(
+        LUR_perc=57.87,
+        LUR_total=533,
+        residues_total=get_total_residues_from_chopping(chopping),
+    )
+    del chopping
+    del lur_summary
