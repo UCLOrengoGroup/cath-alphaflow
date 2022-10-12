@@ -107,13 +107,14 @@ class OraDB(cx_Oracle.Connection):
         sql_where = " AND ".join(sql_where_args)
 
         sql = f"""
-    SELECT
+    SELECT DISTINCT
         upa.ACCESSION                           AS uniprot_acc,
         upa.SEQUENCE_MD5                        AS sequence_md5,
         DOMAIN_ID || '__' || SUPERFAMILY || '/'
             || REPLACE(RESOLVED, ',', '_')      AS gene3d_domain_id,
         SCORE                                   AS bitscore,
-        RESOLVED                                AS chopping
+        RESOLVED                                AS chopping,
+        INDEPENDENT_EVALUE                      AS indp_evalue
     FROM
         {gene3d_dbname}.CATH_DOMAIN_PREDICTIONS cdp
         INNER JOIN {gene3d_dbname}.UNIPROT_PRIM_ACC upa
