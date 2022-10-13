@@ -53,6 +53,19 @@ def get_sse_summary_writer(csvfile):
     return writer
 
 
+def get_plddt_summary_writer(csvfile):
+    writer = get_csv_dictwriter(
+        csvfile,
+        fieldnames=[
+            "af_domain_id",
+            "avg_plddt",
+            "perc_LUR",
+        ],
+    )
+    writer.writeheader()
+    return writer
+
+
 class AFDomainIDReader(csv.DictReader):
     def __init__(self, *args):
         self._seen_header = False

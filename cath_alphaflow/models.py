@@ -125,6 +125,13 @@ class AFDomainID(AFChainID):
 
 
 @dataclass
+class LURSummary:
+    LUR_perc: float
+    LUR_total: int
+    residues_total: int
+
+
+@dataclass
 class SecStrSummary:
     af_domain_id: str
     ss_res_total: int
@@ -170,13 +177,13 @@ class SecStrSummary:
         for residue in dssp_str:
             if residue == "H":
                 sse_H_res += 1
-                if sse_H_res >= min_helix_length and sse_H == False:
+                if sse_H_res >= min_helix_length and not sse_H:
                     sse_H = True
                     sse_H_num += 1
 
             if residue == "E":
                 sse_E_res += 1
-                if sse_E_res >= min_strand_length and sse_E == False:
+                if sse_E_res >= min_strand_length and not sse_E:
                     sse_E = True
                     sse_E_num += 1
 
@@ -194,3 +201,12 @@ class SecStrSummary:
         )
 
         return ss_sum
+
+
+@dataclass
+class pLDDTSummary:
+    af_domain_id: str
+    avg_plddt: float
+    perc_LUR: float
+    LUR_residues: int
+    total_residues: int

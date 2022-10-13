@@ -8,11 +8,7 @@ from cath_alphaflow.io_utils import (
     get_sse_summary_writer,
 )
 from cath_alphaflow.models import SecStrSummary
-from cath_alphaflow.constants import (
-    DEFAULT_DSSP_SUFFIX,
-    DEFAULT_HELIX_MIN_LENGTH,
-    DEFAULT_STRAND_MIN_LENGTH,
-)
+from cath_alphaflow.constants import DEFAULT_DSSP_SUFFIX
 
 
 @click.command()
@@ -60,8 +56,6 @@ def get_sse_summary_from_dssp(
 
     dssp_string = []
     read_headers = False
-    domain_length = 0
-    ss_total = 0
     if acc_id is None:
         acc_id = dssp_path.stem
 

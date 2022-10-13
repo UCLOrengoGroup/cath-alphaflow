@@ -7,6 +7,7 @@ from .commands import create_dataset_cath_files
 from .commands import optimise_domain_boundaries
 from .commands import convert_dssp_to_sse_summary
 from .commands import convert_cif_to_dssp
+from .commands import extract_plddt_and_lur
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s"
@@ -47,3 +48,4 @@ cli.add_command(create_dataset_cath_files.create_dataset_cath_files)
 cli.add_command(optimise_domain_boundaries.optimise_domain_boundaries)
 cli.add_command(convert_dssp_to_sse_summary.convert_dssp_to_sse_summary)
 cli.add_command(convert_cif_to_dssp.convert_cif_to_dssp)
+cli.add_command(extract_plddt_and_lur.convert_cif_to_plddt_summary)
