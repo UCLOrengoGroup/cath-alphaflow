@@ -32,6 +32,7 @@ def test_create_dataset_uniprot_ids(create_mock_query):
             "gene3d_domain_id": "1abcA00__1.10.8.10/23-345",
             "bitscore": 123.4,
             "chopping": "23-345",
+            "indp_evalue": 0,
         }
     ]
     expected_outfile = "uniprot_ids.csv"
