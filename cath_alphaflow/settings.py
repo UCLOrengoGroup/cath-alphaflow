@@ -1,3 +1,4 @@
+from email.policy import default
 from prettyconf import config
 
 DEFAULT_AF_VERSION = 3
@@ -12,6 +13,9 @@ class Settings:
     ORACLE_DB_PASSWORD = config("ORACLE_DB_PASSWORD", default=None)
     DSSP_BINARY_PATH = config("DSSP_BINARY_PATH", default=None)
     DSSP_PDB_DICT = config("DSSP_PDB_DICT", default=None)
+    FS_BINARY_PATH = config("FS_BINARY_PATH", default=None)
+    FS_DB_PATH = config("FS_DB_PATH", default=None)
+    FS_TMP_PATH = config("FS_TMP_PATH", default=None)
 
     def to_dict(self):
         dict = {}
