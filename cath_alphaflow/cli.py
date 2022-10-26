@@ -1,6 +1,8 @@
 import logging
 import click
 
+from cath_alphaflow.commands import convert_foldseek_output_to_summary
+
 from .settings import get_default_settings
 from .commands import create_dataset_uniprot_ids
 from .commands import create_dataset_cath_files
@@ -9,6 +11,8 @@ from .commands import convert_dssp_to_sse_summary
 from .commands import convert_cif_to_dssp
 from .commands import extract_plddt_and_lur
 from .commands import convert_cif_to_foldseek_db
+from .commands import run_foldseek
+from .commands import convert_foldseek_output_to_summary
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s"
@@ -51,3 +55,5 @@ cli.add_command(convert_dssp_to_sse_summary.convert_dssp_to_sse_summary)
 cli.add_command(convert_cif_to_dssp.convert_cif_to_dssp)
 cli.add_command(extract_plddt_and_lur.convert_cif_to_plddt_summary)
 cli.add_command(convert_cif_to_foldseek_db.convert_cif_to_foldseek_db)
+cli.add_command(run_foldseek.run_foldseek)
+cli.add_command(convert_foldseek_output_to_summary.convert_foldseek_output_to_summary)
