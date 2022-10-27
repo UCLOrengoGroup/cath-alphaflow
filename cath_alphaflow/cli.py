@@ -1,7 +1,6 @@
 import logging
 import click
 
-from cath_alphaflow.commands import convert_foldseek_output_to_summary
 
 from .settings import get_default_settings
 from .commands import create_dataset_uniprot_ids
