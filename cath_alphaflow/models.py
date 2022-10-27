@@ -132,6 +132,21 @@ class LURSummary:
 
 
 @dataclass
+class FoldseekSummary:
+    target: str
+    qstart: int
+    qend: int
+    qlen: int
+    tstart: int
+    tend: int
+    tlen: int
+    qcov: float
+    tcov: float
+    bits: int
+    evalue: float
+
+
+@dataclass
 class SecStrSummary:
     af_domain_id: str
     ss_res_total: int
