@@ -38,7 +38,7 @@ LOG = logging.getLogger()
     default=DEFAULT_CIF_SUFFIX,
     help=f"Option: suffix to use for mmCIF files (default: {DEFAULT_CIF_SUFFIX})",
 )
-def convert_cif_to_plddt_summary(
+def chop_cif_command(
     cif_in_dir,
     id_file,
     cif_out_dir,
