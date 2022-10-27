@@ -133,6 +133,7 @@ class LURSummary:
 
 @dataclass
 class FoldseekSummary:
+    query: str
     target: str
     qstart: int
     qend: int
