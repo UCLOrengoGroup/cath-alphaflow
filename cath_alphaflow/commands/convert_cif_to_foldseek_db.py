@@ -78,4 +78,5 @@ def convert_cif_to_foldseek_db(
         check=True,
     )
     click.echo("DONE")
-    return Path.exists(Path(f"{fs_querydb_dir}{fs_querydb_suffix}"))
+    fs_querydb_path = Path(f"{fs_querydb_dir}{fs_querydb_suffix}")
+    return fs_querydb_path.exists()
