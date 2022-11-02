@@ -68,16 +68,22 @@ def convert_cif_to_foldseek_db(
         if not dest_cif_path.exists():
             os.symlink(str(cif_path), str(dest_cif_path))
 
+    fs_querydb_db_path = Path(f"{fs_querydb_dir}{fs_querydb_suffix}")
+
     subprocess.run(
         [
             FS_BINARY_PATH,
             "createdb",
             f"{fs_querydb_path}/",
-            f"{fs_querydb_dir}{fs_querydb_suffix}",
+            str(fs_querydb_db_path),
         ],
         stderr=subprocess.DEVNULL,
         check=True,
     )
+
+    if not fs_querydb_db_path.exists():
+        msg = f"failed to create expected foldseek database file: {fs_querydb_db_path}"
+        raise FileNotFoundError(msg)
+
     click.echo("DONE")
-    fs_querydb_path = Path(f"{fs_querydb_dir}{fs_querydb_suffix}")
-    return fs_querydb_path.exists()
+    return
