@@ -63,7 +63,7 @@ def run_foldseek(fs_querydb, fs_targetdb, fs_rawdata, fs_results, tmp_dir):
         ],
         stderr=subprocess.DEVNULL,
     )
-    subprocess.call(
+    subprocess.run(
         [
             FS_BINARY_PATH,
             "convertalis",
@@ -75,6 +75,7 @@ def run_foldseek(fs_querydb, fs_targetdb, fs_rawdata, fs_results, tmp_dir):
             "query,target,qstart,qend,qlen,tstart,tend,tlen,qcov,tcov,bits,evalue",
         ],
         stderr=subprocess.DEVNULL,
+        check=True,
     )
 
     click.echo("DONE")
