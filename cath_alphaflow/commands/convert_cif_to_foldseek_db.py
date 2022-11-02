@@ -53,7 +53,7 @@ def convert_cif_to_foldseek_db(
     cif_dir, fs_querydb_dir, id_file, cif_suffix, fs_querydb_suffix
 ):
     "Create Foldseek query database from mmCIF folder"
-    fs_querydb_path = Path(fs_querydb_dir)
+    fs_querydb_path = Path(fs_querydb_dir).resolve()
     if not fs_querydb_path.exists():
         os.makedirs(fs_querydb_path)
     for file_stub in yield_first_col(id_file):
@@ -64,8 +64,9 @@ def convert_cif_to_foldseek_db(
             LOG.error(msg)
             raise FileNotFoundError(msg)
         # Create symlinks to querydb_dir
-        if os.path.exists(f"{fs_querydb_path}/{cif_path.name}") == False:
-            os.symlink(cif_path, f"{fs_querydb_path}/{cif_path.name}")
+        dest_cif_path = fs_querydb_path / cif_path.name
+        if not dest_cif_path.exists():
+            os.symlink(str(cif_path), str(dest_cif_path))
 
     subprocess.run(
         [
