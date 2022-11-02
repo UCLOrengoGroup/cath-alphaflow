@@ -41,13 +41,13 @@ LOG = logging.getLogger()
     "--fs_querydb_suffix",
     type=str,
     default=DEFAULT_FS_QUERYDB_SUFFIX,
-    help=f"Input: optional suffix to add to Foldseek query database during creation (default: {DEFAULT_FS_QUERYDB_SUFFIX})",
+    help=f"Output: optional suffix to add to Foldseek query database during creation (default: {DEFAULT_FS_QUERYDB_SUFFIX})",
 )
 @click.option(
     "--fs_querydb_dir",
     type=click.Path(file_okay=False, dir_okay=True, resolve_path=True),
     required=True,
-    help=f"Input: optional suffix to add to Foldseek query database during creation",
+    help=f"Output: directory to use for Foldseek query database during creation",
 )
 def convert_cif_to_foldseek_db(
     cif_dir, fs_querydb_dir, id_file, cif_suffix, fs_querydb_suffix
