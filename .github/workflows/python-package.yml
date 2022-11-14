@@ -33,7 +33,7 @@ jobs:
     - name: Install Foldseek
       run: |
         wget https://mmseqs.com/foldseek/foldseek-linux-sse41.tar.gz; tar xvzf foldseek-linux-sse41.tar.gz
-        echo "::add-path::${GITHUB_WORKSPACE}/foldseek/bin"
+        echo "${GITHUB_WORKSPACE}/foldseek/bin:$PATH" > $GITHUB_PATH
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
