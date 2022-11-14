@@ -144,3 +144,4 @@ config.env
 
 # VSCode
 .vscode/settings.json
+.vscode/settings.json

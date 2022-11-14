@@ -1,6 +1,12 @@
 from cath_alphaflow import settings
+import logging
 import pytest
 import cx_Oracle
+
+from click.testing import CliRunner
+
+
+LOG = logging.getLogger(__name__)
 
 
 class MockCursorIterator:
@@ -116,3 +122,24 @@ def mock_settings(monkeypatch):
         return settings.TestSettings()
 
     monkeypatch.setattr(settings, "get_default_settings", mock_get_default_settings)
+
+
+@pytest.fixture
+def create_cli_runner(monkeypatch):
+    def _create_cli_runner(**kwargs):
+        def mock_get_default_settings():
+            _settings = settings.TestSettings()
+            for key, val in kwargs.items():
+                LOG.info(f"overriding local tests setting: {key}={val}")
+                print(f"overriding local tests setting: {key}={val}")
+                setattr(_settings, key, val)
+            return _settings
+
+        monkeypatch.setattr(settings, "get_default_settings", mock_get_default_settings)
+
+        cli_runner = CliRunner()
+        return cli_runner
+
+    yield _create_cli_runner
+
+    # cleanup

@@ -4,6 +4,7 @@ import itertools
 
 from .models import AFChainID
 from .models import AFDomainID
+from .models import FoldseekSummary
 
 LOG = logging.getLogger(__name__)
 
@@ -34,6 +35,47 @@ def get_sse_summary_reader(csvfile):
     reader = get_csv_dictreader(csvfile)
     next(reader)
     return reader
+
+
+def get_foldseek_reader(csvfile):
+    foldseek_fieldnames = [
+        "query",
+        "target",
+        "qstart",
+        "qend",
+        "qlen",
+        "tstart",
+        "tend",
+        "tlen",
+        "qcov",
+        "tcov",
+        "bits",
+        "evalue",
+    ]
+    foldseek_reader = get_csv_dictreader(csvfile, fieldnames=foldseek_fieldnames)
+    return foldseek_reader
+
+
+def get_foldseek_summary_writer(csvfile):
+    writer = get_csv_dictwriter(
+        csvfile,
+        fieldnames=[
+            "query",
+            "target",
+            "qstart",
+            "qend",
+            "qlen",
+            "tstart",
+            "tend",
+            "tlen",
+            "qcov",
+            "tcov",
+            "bits",
+            "evalue",
+        ],
+    )
+    writer.writeheader()
+    return writer
 
 
 def get_sse_summary_writer(csvfile):
