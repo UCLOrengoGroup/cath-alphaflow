@@ -53,6 +53,11 @@ def convert_cif_to_foldseek_db(
     cif_dir, fs_querydb_dir, id_file, cif_suffix, fs_querydb_suffix
 ):
     "Create Foldseek query database from mmCIF folder"
+
+    if FS_BINARY_PATH is None:
+        msg = "expected foldseek binary path (FS_BINARY_PATH) to be set"
+        raise RuntimeError(msg)
+
     fs_querydb_path = Path(fs_querydb_dir).resolve()
     if not fs_querydb_path.exists():
         os.makedirs(fs_querydb_path)
@@ -72,9 +77,9 @@ def convert_cif_to_foldseek_db(
 
     subprocess.run(
         [
-            FS_BINARY_PATH,
+            str(FS_BINARY_PATH),
             "createdb",
-            f"{fs_querydb_path}/",
+            str(fs_querydb_path) + "/",
             str(fs_querydb_db_path),
         ],
         stderr=subprocess.DEVNULL,
