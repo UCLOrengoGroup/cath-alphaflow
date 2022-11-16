@@ -13,7 +13,7 @@ from cath_alphaflow.chopping import chop_cif
 LOG = logging.getLogger()
 
 
-@click.command()
+@click.command("chop_cif")
 @click.option(
     "--cif_in_dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True),
