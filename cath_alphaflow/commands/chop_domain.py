@@ -114,6 +114,7 @@ def chop_cif_command(
             msg = f"failed to locate CIF input file {cif_in_dir}/{af_chain_stub}{VALID_CIF_SUFFIXES}"
             if input_file_policy == FILE_POLICY_SKIP:
                 LOG.warning(msg + " (skipping)")
+                continue
             elif input_file_policy == FILE_POLICY_ERROR:
                 LOG.error(msg)
                 raise FileNotFoundError(msg)
