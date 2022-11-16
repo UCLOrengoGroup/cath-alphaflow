@@ -33,8 +33,8 @@ class PredictedCathDomain:
 
 @dataclass
 class Segment:
-    start: str
-    end: str
+    start: int
+    end: int
 
     def deep_copy(self):
         return Segment(start=self.start, end=self.end)
