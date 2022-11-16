@@ -1,13 +1,15 @@
+import gzip
 import logging
 from pathlib import Path
 import re
 from typing import Callable, Union
 
+
 from Bio.PDB import MMCIFParser
 from Bio.PDB.mmcifio import MMCIFIO
 
 from .models import Chopping
-from .errors import ChoppingError, MultipleModelsError, MultipleChainsError
+from .errors import ChoppingError, MultipleModelsError, MultipleChainsError, ParseError
 
 LOG = logging.getLogger(__name__)
 
@@ -40,7 +42,11 @@ def chop_cif(
 
     parser = MMCIFParser()
 
-    structure = parser.get_structure(domain_id, str(chain_cif_path))
+    if str(chain_cif_path).endswith(".gz"):
+        with gzip.open(str(chain_cif_path), mode="rt") as fp:
+            structure = parser.get_structure(domain_id, fp)
+    else:
+        structure = parser.get_structure(domain_id, str(chain_cif_path))
 
     io = MMCIFIO()
 
@@ -88,8 +94,11 @@ def chop_cif(
 
     cif_selector = CifSelector()
 
-    io.save(str(domain_cif_path), select=cif_selector)
-    # io.save(str(domain_cif_path))
+    if str(domain_cif_path).endswith(".gz"):
+        with gzip.open(str(domain_cif_path), mode="wt") as fp:
+            io.save(fp, select=cif_selector)
+    else:
+        io.save(str(domain_cif_path), select=cif_selector)
 
 
 class ChoppingProcessor:
