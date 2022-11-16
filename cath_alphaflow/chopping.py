@@ -33,7 +33,8 @@ def chop_cif(
     The optional `map_to_pdb_resid` parameter should provide a callable that accepts
     the start/end residue (`str`) from the chopping/segment and returns the equivalent
     residue name from the PDB/CIF structure. By default this is a 1:1 mapping, i.e. it
-    is assumed that the start/end in the chopping are based on PDB residue names.
+    is assumed that the start/end values in the chopping are equivalent to the residue
+    labels in CIF.
 
     """
 
