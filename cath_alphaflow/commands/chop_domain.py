@@ -14,6 +14,7 @@ LOG = logging.getLogger()
 ID_TYPE_AF_DOMAIN = "af"
 ID_TYPE_UNIPROT_DOMAIN = "uniprot"
 DEFAULT_AF_FRAGMENT_NUMBER = 1
+VALID_CIF_SUFFIXES = [".cif", ".cif.gz"]
 
 
 @click.command("chop-cif")
@@ -46,18 +47,11 @@ DEFAULT_AF_FRAGMENT_NUMBER = 1
     type=int,
     help=f"Option: specify the AF version when parsing uniprot ids",
 )
-@click.option(
-    "--cif_suffix",
-    type=str,
-    default=DEFAULT_CIF_SUFFIX,
-    help=f"Option: suffix to use for mmCIF files (default: {DEFAULT_CIF_SUFFIX})",
-)
 def chop_cif_command(
     cif_in_dir,
     id_file,
     id_type,
     cif_out_dir,
-    cif_suffix,
     af_version,
 ):
     "Apply chopping to CIF files"
@@ -78,9 +72,15 @@ def chop_cif_command(
             raise click.UsageError(f"failed to recognise id_type={id_type}")
 
         af_chain_stub = af_domain_id.af_chain_id
-        chain_cif_path = Path(cif_in_dir) / f"{af_chain_stub}{cif_suffix}"
+
+        chain_cif_path = None
+        for cif_suffix in VALID_CIF_SUFFIXES:
+            chain_cif_path = Path(cif_in_dir) / f"{af_chain_stub}{cif_suffix}"
+            if chain_cif_path.exists():
+                break
+
         if not chain_cif_path.exists():
-            msg = f"failed to locate CIF input file {chain_cif_path}"
+            msg = f"failed to locate CIF input file {cif_in_dir}/{af_chain_stub}{VALID_CIF_SUFFIXES}"
             LOG.error(msg)
             raise FileNotFoundError(msg)
 
