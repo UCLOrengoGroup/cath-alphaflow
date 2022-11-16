@@ -35,15 +35,15 @@ def write_ids_to_file(fh, headers, ids):
     fh.flush()
 
 
-def create_fake_cif_dir(dirname, ids, cif_src=EXAMPLE_CIF_FILE):
-    dir_path = Path(dirname)
-    if not dir_path.exists():
-        dir_path.mkdir()
+def create_fake_cif_dir(cif_path, ids, cif_src=EXAMPLE_CIF_FILE):
+    cif_path = Path(str(cif_path))
+    if not cif_path.exists():
+        cif_path.mkdir()
     for _id in ids:
-        cif_path_dest = dir_path / f"{_id}.cif.gz"
+        cif_path_dest = cif_path / f"{_id}.cif.gz"
         # print(f"Creating symbolic link for test file {cif_src} -> {cif_path_dest}")
         os.symlink(cif_src, f"{cif_path_dest}")
-    return dir_path
+    return cif_path
 
 
 def test_optimise_domain_boundaries(tmp_path):
@@ -142,7 +142,7 @@ def test_calculate_domain_id_post_tailchop(
 
     af_chain_id = EXAMPLE_AF_ID
     af_domain_id = AFDomainID.from_str(f"{af_chain_id}/{old_chopping}")
-    cif_dir = create_fake_cif_dir(tmp_path.name, ids=[af_chain_id])
+    cif_dir = create_fake_cif_dir(tmp_path, ids=[af_chain_id])
 
     new_af_domain_id = calculate_domain_id_post_tailchop(
         af_domain_id=af_domain_id, af_chain_mmcif_dir=cif_dir, cutoff_plddt_score=cutoff

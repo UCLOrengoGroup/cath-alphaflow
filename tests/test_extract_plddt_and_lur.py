@@ -24,18 +24,17 @@ def test_cli_usage():
         assert "Usage:" in result.output
 
 
-def create_fake_cif_path(dirname, cif_id, cif_src=EXAMPLE_CIF_FILE):
-    dir_path = Path(dirname)
-    dir_path.mkdir()
+def create_fake_cif_path(tmp_root_path, cif_id, cif_src=EXAMPLE_CIF_FILE):
 
-    cif_path_dest = dir_path / f"{cif_id}.cif.gz"
+    cif_path_dest = tmp_root_path / f"{cif_id}.cif.gz"
+
     os.symlink(cif_src, f"{cif_path_dest}")
     return cif_path_dest
 
 
 def test_extract_plddt_summary(tmp_path):
     acc_id = "test1"
-    cif_path = create_fake_cif_path(tmp_path.name, acc_id)
+    cif_path = create_fake_cif_path(tmp_path, acc_id)
     chopping = Chopping(segments=[Segment("10", "20")])
 
     average_plddt = get_average_plddt_from_plddt_string(
@@ -59,7 +58,7 @@ def get_total_residues_from_chopping(chopping):
 
 def test_extract_LUR_summary(tmp_path):
     acc_id = "test1"
-    cif_path = create_fake_cif_path(tmp_path.name, acc_id)
+    cif_path = create_fake_cif_path(tmp_path, acc_id)
     chopping = Chopping(segments=[Segment("10", "20")])
 
     lur_summary = get_LUR_residues_percentage(
