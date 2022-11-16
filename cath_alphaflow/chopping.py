@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 import re
-from typing import Callable
+from typing import Callable, Union
 
 from Bio.PDB import MMCIFParser
 from Bio.PDB.mmcifio import MMCIFIO
@@ -119,7 +119,7 @@ class ChoppingProcessor:
 
     def __init__(
         self,
-        chopping: str | Chopping,
+        chopping: Union[str, Chopping],
         on_segment_residue: Callable,
         *,
         map_to_pdb_resid: Callable = default_map_to_pdb_resid,
