@@ -14,6 +14,10 @@ RE_AF_DOMAIN_ID = re.compile(
     r"AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9])-model_v(?P<version>[0-9]+)/(?P<chopping>[0-9\-_]+)"
 )
 
+RE_UNIPROT_DOMAIN_ID = re.compile(
+    r"^(?P<uniprot_acc>[0-9A-Z]+)/(?P<chopping>[0-9\-_]+)$"
+)
+
 LOG = logging.getLogger(__name__)
 
 
@@ -108,6 +112,24 @@ class AFChainID:
 class AFDomainID(AFChainID):
 
     chopping: Chopping
+
+    @classmethod
+    def from_uniprot_str(cls, raw_id: str, *, version: int, fragment_number: int = 1):
+
+        match = RE_UNIPROT_DOMAIN_ID.match(raw_id)
+        try:
+            domid = AFDomainID(
+                uniprot_acc=match.group("uniprot_acc"),
+                fragment_number=fragment_number,
+                version=version,
+                chopping=Chopping.from_str(match.group("chopping")),
+            )
+        except (KeyError, AttributeError):
+            msg = f"failed to parse AFDomainId from uniprot id {raw_id}"
+            LOG.error(msg)
+            raise ParseError(msg)
+
+        return domid
 
     @classmethod
     def from_str(cls, raw_domid: str):

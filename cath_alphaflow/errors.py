@@ -6,6 +6,10 @@ class ParseError(BaseError):
     pass
 
 
+class UsageError(BaseError):
+    pass
+
+
 class MultipleModelsError(BaseError):
     pass
 

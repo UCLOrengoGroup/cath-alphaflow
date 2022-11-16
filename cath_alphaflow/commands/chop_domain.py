@@ -8,9 +8,13 @@ from cath_alphaflow.io_utils import (
 from cath_alphaflow.models import AFDomainID
 from cath_alphaflow.constants import DEFAULT_CIF_SUFFIX
 from cath_alphaflow.chopping import chop_cif
-
+from cath_alphaflow.errors import UsageError
 
 LOG = logging.getLogger()
+
+ID_TYPE_AF_DOMAIN = "af"
+ID_TYPE_UNIPROT_DOMAIN = "uniprot"
+DEFAULT_AF_FRAGMENT_NUMBER = 1
 
 
 @click.command("chop-cif")
@@ -33,6 +37,17 @@ LOG = logging.getLogger()
     help="Output: directory of CIF files",
 )
 @click.option(
+    "--id_type",
+    type=click.Choice([ID_TYPE_AF_DOMAIN, ID_TYPE_UNIPROT_DOMAIN]),
+    default=ID_TYPE_AF_DOMAIN,
+    help=f"Option: specify the type of ID to specify the chopping [{ID_TYPE_AF_DOMAIN}]",
+)
+@click.option(
+    "--af_version",
+    type=int,
+    help=f"Option: specify the AF version when parsing uniprot ids",
+)
+@click.option(
     "--cif_suffix",
     type=str,
     default=DEFAULT_CIF_SUFFIX,
@@ -41,13 +56,28 @@ LOG = logging.getLogger()
 def chop_cif_command(
     cif_in_dir,
     id_file,
+    id_type,
     cif_out_dir,
     cif_suffix,
+    af_version,
 ):
-    "Creates structure files corresponding to"
+    "Apply chopping to CIF files"
 
-    for af_domain_id_str in yield_first_col(id_file):
-        af_domain_id = AFDomainID.from_str(af_domain_id_str)
+    if id_type == ID_TYPE_UNIPROT_DOMAIN and af_version is None:
+        raise UsageError(
+            "option --af_version must be specified when using id_type={id_type}"
+        )
+
+    for id_str in yield_first_col(id_file):
+        if id_type == ID_TYPE_AF_DOMAIN:
+            af_domain_id = AFDomainID.from_uniprot_str(
+                id_str, fragment_number=DEFAULT_AF_FRAGMENT_NUMBER, version=af_version
+            )
+        elif id_type == ID_TYPE_UNIPROT_DOMAIN:
+            af_domain_id = AFDomainID.from_str(id_str)
+        else:
+            raise UsageError(f"failed to recognise id_type={id_type}")
+
         af_chain_stub = af_domain_id.af_chain_id
         chain_cif_path = Path(cif_in_dir) / f"{af_chain_stub}{cif_suffix}"
         if not chain_cif_path.exists():
