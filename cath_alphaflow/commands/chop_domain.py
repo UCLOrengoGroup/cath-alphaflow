@@ -8,7 +8,6 @@ from cath_alphaflow.io_utils import (
 from cath_alphaflow.models import AFDomainID
 from cath_alphaflow.constants import DEFAULT_CIF_SUFFIX
 from cath_alphaflow.chopping import chop_cif
-from cath_alphaflow.errors import UsageError
 
 LOG = logging.getLogger()
 
@@ -64,8 +63,8 @@ def chop_cif_command(
     "Apply chopping to CIF files"
 
     if id_type == ID_TYPE_UNIPROT_DOMAIN and af_version is None:
-        raise UsageError(
-            "option --af_version must be specified when using id_type={id_type}"
+        raise click.UsageError(
+            f"option --af_version must be specified when using id_type={id_type}"
         )
 
     for id_str in yield_first_col(id_file):
