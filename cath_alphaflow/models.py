@@ -156,6 +156,9 @@ class AFDomainID(AFChainID):
     def to_str(self):
         return self.af_domain_id
 
+    def to_file_stub(self):
+        return self.af_domain_id.replace("/", "-")
+
     def deep_copy(self):
         flds = asdict(self)
         flds["chopping"] = self.chopping.deep_copy()

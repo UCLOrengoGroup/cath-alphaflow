@@ -84,7 +84,7 @@ def chop_cif_command(
             LOG.error(msg)
             raise FileNotFoundError(msg)
 
-        domain_cif_path = Path(cif_out_dir) / (af_domain_id.to_str() + cif_suffix)
+        domain_cif_path = Path(cif_out_dir) / (af_domain_id.to_file_stub() + cif_suffix)
         if domain_cif_path.exists():
             msg = f"output domain CIF file already exists: {domain_cif_path}"
             LOG.error(msg)
