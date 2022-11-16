@@ -14,6 +14,7 @@ LOG = logging.getLogger()
 
 ID_TYPE_AF_DOMAIN = "af"
 ID_TYPE_UNIPROT_DOMAIN = "uniprot"
+DEFAULT_AF_FRAGMENT_NUMBER = 1
 
 
 @click.command("chop-cif")
@@ -42,6 +43,11 @@ ID_TYPE_UNIPROT_DOMAIN = "uniprot"
     help=f"Option: specify the type of ID to specify the chopping [{ID_TYPE_AF_DOMAIN}]",
 )
 @click.option(
+    "--af_version",
+    type=int,
+    help=f"Option: specify the AF version when parsing uniprot ids",
+)
+@click.option(
     "--cif_suffix",
     type=str,
     default=DEFAULT_CIF_SUFFIX,
@@ -53,12 +59,20 @@ def chop_cif_command(
     id_type,
     cif_out_dir,
     cif_suffix,
+    af_version,
 ):
-    "Creates structure files corresponding to"
+    "Apply chopping to CIF files"
+
+    if id_type == ID_TYPE_UNIPROT_DOMAIN and af_version is None:
+        raise UsageError(
+            "option --af_version must be specified when using id_type={id_type}"
+        )
 
     for id_str in yield_first_col(id_file):
         if id_type == ID_TYPE_AF_DOMAIN:
-            af_domain_id = AFDomainID.from_uniprot_str(id_str)
+            af_domain_id = AFDomainID.from_uniprot_str(
+                id_str, fragment_number=DEFAULT_AF_FRAGMENT_NUMBER, version=af_version
+            )
         elif id_type == ID_TYPE_UNIPROT_DOMAIN:
             af_domain_id = AFDomainID.from_str(id_str)
         else:
