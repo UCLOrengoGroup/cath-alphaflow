@@ -91,6 +91,7 @@ def chop_cif_command(
             raise FileExistsError(msg)
 
         chop_cif(
+            domain_id=af_domain_id.to_str(),
             chain_cif_path=chain_cif_path,
             domain_cif_path=domain_cif_path,
             chopping=af_domain_id.chopping,
