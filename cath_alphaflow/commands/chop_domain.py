@@ -8,6 +8,7 @@ from cath_alphaflow.io_utils import (
 from cath_alphaflow.models import AFDomainID
 from cath_alphaflow.constants import DEFAULT_CIF_SUFFIX
 from cath_alphaflow.chopping import chop_cif
+from cath_alphaflow.errors import ChoppingError
 
 LOG = logging.getLogger()
 
@@ -137,11 +138,16 @@ def chop_cif_command(
                 msg = f"unexpected output file policy {output_file_policy}"
                 raise click.UsageError(msg)
 
-        chop_cif(
-            domain_id=af_domain_id.to_str(),
-            chain_cif_path=chain_cif_path,
-            domain_cif_path=domain_cif_path,
-            chopping=af_domain_id.chopping,
-        )
+        try:
+            chop_cif(
+                domain_id=af_domain_id.to_str(),
+                chain_cif_path=chain_cif_path,
+                domain_cif_path=domain_cif_path,
+                chopping=af_domain_id.chopping,
+            )
+        except ChoppingError as err:
+            msg = f"failed to chop cif file {chain_cif_path} with chopping {af_domain_id.chopping}: {err}"
+            LOG.error(msg)
+            raise
 
     click.echo("DONE")
