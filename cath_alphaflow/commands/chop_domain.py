@@ -70,11 +70,11 @@ def chop_cif_command(
 
     for id_str in yield_first_col(id_file):
         if id_type == ID_TYPE_AF_DOMAIN:
+            af_domain_id = AFDomainID.from_str(id_str)
+        elif id_type == ID_TYPE_UNIPROT_DOMAIN:
             af_domain_id = AFDomainID.from_uniprot_str(
                 id_str, fragment_number=DEFAULT_AF_FRAGMENT_NUMBER, version=af_version
             )
-        elif id_type == ID_TYPE_UNIPROT_DOMAIN:
-            af_domain_id = AFDomainID.from_str(id_str)
         else:
             raise UsageError(f"failed to recognise id_type={id_type}")
 
