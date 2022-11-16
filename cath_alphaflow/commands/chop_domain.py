@@ -75,7 +75,7 @@ def chop_cif_command(
                 id_str, fragment_number=DEFAULT_AF_FRAGMENT_NUMBER, version=af_version
             )
         else:
-            raise UsageError(f"failed to recognise id_type={id_type}")
+            raise click.UsageError(f"failed to recognise id_type={id_type}")
 
         af_chain_stub = af_domain_id.af_chain_id
         chain_cif_path = Path(cif_in_dir) / f"{af_chain_stub}{cif_suffix}"
