@@ -85,6 +85,13 @@ class Chopping:
     def last_residue(self):
         return self.segments[-1].end
 
+    def __str__(self):
+        _map_str = None
+        if self.map_to_uniprot_residue:
+            _map_str = f"map_to_uniprot_residue(1 => {self.map_to_uniprot_residue(1)})"
+
+        return f"<Chopping str='{self.to_str()}' {_map_str}>"
+
 
 @dataclass
 class AFChainID:
@@ -151,14 +158,14 @@ class AFDomainID(AFChainID):
             for _frag_num in range(1, 30):
                 # 1:0, 2:200, 3:400, ...
                 offset_to_pdb = (_frag_num - 1) * AF_FRAGMENT_OVERLAP_WINDOW
-                frag_window_start = ((_frag_num - 1) * AF_FRAGMENT_MAX_RESIDUES) + 1
+                frag_window_start = offset_to_pdb + 1
                 frag_window_end = frag_window_start + AF_FRAGMENT_MAX_RESIDUES - 1
                 if (
                     chopping.last_residue >= frag_window_start
                     and chopping.last_residue <= frag_window_end
                 ):
                     fragment_number = _frag_num
-                    chopping.map_to_uniprot_residue = lambda x: x - offset_to_pdb
+                    chopping.map_to_uniprot_residue = lambda x: x + offset_to_pdb
                     break
             else:
                 msg = (
