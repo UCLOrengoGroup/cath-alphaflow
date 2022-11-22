@@ -140,6 +140,7 @@ dmypy.json
 work/
 .nextflow.log.*
 dataset10k*
+dataset100k*
 config.env
 
 # VSCode

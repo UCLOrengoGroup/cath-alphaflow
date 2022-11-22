@@ -118,3 +118,30 @@ def test_chop_multi_fragment():
         domain_cif_path=Path(new_cif_tmpfile.name),
         chopping=example_chopping,
     )
+
+
+def test_chop_gzip_cif(example_chopping_str, example_expected_resids):
+    """
+    check we can transparently use .gz files to read and write
+    """
+
+    new_cif_tmpfile = tempfile.NamedTemporaryFile(suffix=".cif.gz")
+    example_chopping = Chopping.from_str(example_chopping_str)
+
+    chop_cif(
+        domain_id="1abc",
+        chain_cif_path=Path(EXAMPLE_CIF_FILE),
+        domain_cif_path=Path(new_cif_tmpfile.name),
+        chopping=example_chopping,
+    )
+
+    assert Path(new_cif_tmpfile.name).exists()
+
+    parser = MMCIFParser()
+    with gzip.open(new_cif_tmpfile.name, mode="rt") as fp:
+        structure = parser.get_structure("1abc", fp)
+
+    # this structure should only contain residues from the given chopping and nothing else
+    resids = [res.get_id() for res in list(structure.get_residues())]
+
+    assert resids == example_expected_resids
