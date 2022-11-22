@@ -109,6 +109,10 @@ class ChoppingProcessor:
     are numbered 1-n (residue labels are strings that often look like numbers but can be
     non-sequential and include optional insert codes).
 
+    Also note that the chopping object can have a `map_to_uniprot_residue` function that maps
+    the numbers in the chopping to the actual uniprot residue (e.g. fragment 2 of AF model is
+    numbered 1-1400 in the PDB/CIF file, but this maps to UniProt resodies 201-1600)
+
     Typical usage example:
 
         # compile a list of all the residues within a domain "chopping"
@@ -194,6 +198,14 @@ class ChoppingProcessor:
         self.init()
         for residue in chain.get_unpacked_list():
 
+            residue_id = residue.id
+            # if the chopping has set a mapping between PDB residue and chopping
+            # (e.g due to AF fragments being offset), then apply that here
+            if self.chopping.map_to_uniprot_residue:
+                res_num = residue_id[1]
+                uniprot_num = self.chopping.map_to_uniprot_residue(res_num)
+                residue_id = (residue_id[0], uniprot_num, residue_id[2])
+
             # not currently in a segment and we don't have any more segments to look for
             if self.current_segment is None and self.next_segment is None:
                 break
@@ -201,7 +213,7 @@ class ChoppingProcessor:
             # not currently in a segment, but we are looking for one ...
             if self.current_segment is None and self.next_segment is not None:
                 # check for the start of the segment
-                if residue.id == self.next_start_resid:
+                if residue_id == self.next_start_resid:
                     self.enter_segment()
 
             # in a segment
@@ -209,5 +221,5 @@ class ChoppingProcessor:
                 # do something with this residue
                 self.on_segment_residue(residue)
                 # check for the end of the segment
-                if residue.id == self.current_end_resid:
+                if residue_id == self.current_end_resid:
                     self.exit_segment()

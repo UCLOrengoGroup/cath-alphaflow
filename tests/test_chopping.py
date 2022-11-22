@@ -4,14 +4,20 @@ from pathlib import Path
 import pytest
 import tempfile
 
+from Bio import SeqIO
 from Bio.PDB import MMCIFParser
+from Bio.PDB.Polypeptide import three_to_one
 from Bio.PDB.mmcifio import MMCIFIO
+from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 
-from cath_alphaflow.models import Chopping
+from cath_alphaflow.models import Chopping, AFDomainID
 from cath_alphaflow.chopping import ChoppingProcessor, chop_cif
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures"
 EXAMPLE_CIF_FILE = FIXTURE_PATH / "cif" / "AF-P00520-F1-model_v3.cif.gz"
+
+MULTI_FRAG_EXAMPLE_CIF_PATH = FIXTURE_PATH / "cif" / "AF-Q15772-F11-model_v4.cif.gz"
+MULTI_FRAG_EXAMPLE_FASTA_PATH = FIXTURE_PATH / "fasta" / "Q15772.fasta"
 
 LOG = logging.getLogger(__name__)
 
@@ -23,8 +29,12 @@ def example_cif_gzipped_path():
 
 @pytest.fixture
 def example_cif_tmpfile(example_cif_gzipped_path):
+    return get_unzipped_cif_file(example_cif_gzipped_path)
+
+
+def get_unzipped_cif_file(zipped_cif_path):
     tmp_cif_file = tempfile.NamedTemporaryFile(mode="wt", suffix=".cif")
-    with gzip.open(str(example_cif_gzipped_path), mode="rt") as fh:
+    with gzip.open(str(zipped_cif_path), mode="rt") as fh:
         for line in fh:
             tmp_cif_file.write(line)
     return tmp_cif_file
@@ -100,6 +110,43 @@ def test_chop_cif(example_cif_tmpfile, example_chopping_str, example_expected_re
     resids = [res.get_id() for res in list(structure.get_residues())]
 
     assert resids == example_expected_resids
+
+
+def test_chop_multi_fragment():
+    new_cif_tmpfile = tempfile.NamedTemporaryFile(mode="wt", suffix=".cif")
+    expected_fragment_number = 11
+    dom_start = 2944
+    dom_end = 3260
+    uniprot_with_chopping = f"Q15772/{dom_start}-{dom_end}"
+    af_domain_id = AFDomainID.from_uniprot_str(uniprot_with_chopping, version=3)
+
+    assert af_domain_id.fragment_number == expected_fragment_number
+    example_chopping = af_domain_id.chopping
+    assert example_chopping.map_to_uniprot_residue is not None
+
+    chop_cif(
+        domain_id="1abc",
+        chain_cif_path=Path(MULTI_FRAG_EXAMPLE_CIF_PATH),
+        domain_cif_path=Path(new_cif_tmpfile.name),
+        chopping=example_chopping,
+    )
+
+    # check that the sequences match up
+    seq_entry = next(SeqIO.parse(MULTI_FRAG_EXAMPLE_FASTA_PATH, "fasta"))
+    assert len(seq_entry.seq) == 3267
+
+    sequence_from_chopped_fasta = seq_entry.seq[dom_start - 1 : dom_end]
+
+    parser = MMCIFParser()
+    # check that the sifts residue numbering looks sensible
+    with open(new_cif_tmpfile.name, mode="rt") as fp:
+        structure = parser.get_structure(uniprot_with_chopping, fp)
+
+    sequence_from_chopped_cif = "".join(
+        [three_to_one(res.get_resname()) for res in structure.get_residues()]
+    )
+
+    assert sequence_from_chopped_fasta == sequence_from_chopped_cif
 
 
 def test_chop_gzip_cif(example_chopping_str, example_expected_resids):

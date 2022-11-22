@@ -145,3 +145,6 @@ config.env
 
 # VSCode
 .vscode/settings.json
+
+# local data
+dataset100k
