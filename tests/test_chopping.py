@@ -114,7 +114,7 @@ def test_chop_multi_fragment():
     example_chopping = Chopping.from_str("2944-3260")
     chop_cif(
         domain_id="1abc",
-        chain_cif_path=example_cif_tmpfile,
-        domain_cif_path=new_cif_tmpfile,
+        chain_cif_path=Path(example_cif_tmpfile.name),
+        domain_cif_path=Path(new_cif_tmpfile.name),
         chopping=example_chopping,
     )
