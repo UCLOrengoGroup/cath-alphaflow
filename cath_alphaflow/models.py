@@ -155,7 +155,7 @@ class AFDomainID(AFChainID):
         if fragment_number is None:
 
             # F1=1-1400, F2=201-1600, etc
-            for _frag_num in range(1, 30):
+            for _frag_num in range(1, 100):
                 # 1:0, 2:200, 3:400, ...
                 offset_to_pdb = (_frag_num - 1) * AF_FRAGMENT_OVERLAP_WINDOW
                 frag_window_start = offset_to_pdb + 1
