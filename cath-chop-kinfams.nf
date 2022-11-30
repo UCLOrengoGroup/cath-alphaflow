@@ -16,23 +16,25 @@ params.dataset_name = 'dataset100k'
 params.dataset_max_records = '100000'
 params.dataset_max_evalue = '1E-50'
 
-params.uniprot_ids_csv = "${params.dataset_name}.uniprot_ids.csv"
-params.uniprot_md5_csv = "${params.dataset_name}.uniprot_md5.csv"
-params.gene3d_crh_output = "${params.dataset_name}.gene3d_crh_output.csv"
-params.af_domainlist_ids_csv = "${params.dataset_name}.af_domainlist_ids.csv"
-params.af_chainlist_ids_csv = "${params.dataset_name}.af_chainlist_ids.csv"
-params.af_cath_orig_annotations_csv = "${params.dataset_name}.af_cath_orig_annotations.csv"
-params.af_manifest_file = "${params.dataset_name}.af_manifest_file"
-
 params.publish_dir = "$workflow.projectDir/kinfams-results"
-params.af_to_cluster_file = "${params.publish_dir}/human_kinfams_uniprot_list_full"
-params.uniprot_ids_filename = "uniprot_id.txt"
-params.uniprot_domain_ids_filename = "uniprot_domain_id.txt"
-params.af_manifest_filename = "af_manifest.txt"
-params.af_cif_raw_dir = "${params.publish_dir}/cif_raw"
-params.af_cif_chopped_dir = "${params.publish_dir}/cif_chopped"
+
 params.af_version = 4
 params.af_download_stem = "gs://public-datasets-deepmind-alphafold-v${params.af_version}"
+
+params.af_to_cluster_fn = "human_kinfams_uniprot_list_full"
+
+params.uniprot_ids_csv_fn = "uniprot_ids.csv"
+params.uniprot_md5_csv_fn = "uniprot_md5.csv"
+params.gene3d_crh_output_fn = "gene3d_crh_output.csv"
+params.af_domainlist_ids_csv_fn = "af_domainlist_ids.csv"
+params.af_chainlist_ids_csv_fn = "af_chainlist_ids.csv"
+params.af_cath_orig_annotations_csv_fn = "af_cath_orig_annotations.csv"
+params.af_manifest_file_fn = "af_manifest_file"
+params.uniprot_domain_ids_fn = "uniprot_domain_id.txt"
+params.af_manifest_fn = "af_manifest.txt"
+params.af_cif_raw_dir = "cif_raw"
+params.af_cif_chopped_dir = "cif_chopped"
+params.plddt_stats_fn = "plddt_summary.csv"
 
 
 // A0A0S2Z4D1/43-337 kinases_4.3-FF-000306.faa
@@ -45,10 +47,10 @@ process create_af_manifest_file {
     path uniprot_id_file
     
     output:
-    path params.af_manifest_filename
+    path params.af_manifest_fn
 
     """
-    cat ${uniprot_id_file} | awk '{print "${params.af_download_stem}/AF-"\$1"-F*.cif"}' > ${params.af_manifest_filename}
+    cat ${uniprot_id_file} | awk '{print "${params.af_download_stem}/AF-"\$1"-F*.cif"}' > ${params.af_manifest_fn}
     """
 }
 
@@ -78,12 +80,11 @@ process kinfam_clusters_to_uniprot_domain_ids {
     path cluster_path
 
     output:
-    path params.uniprot_domain_ids_filename
+    path params.uniprot_domain_ids_fn
 
     """
-    cat ${cluster_path} | awk '{print \$1}' > ${params.uniprot_domain_ids_filename}
+    cat ${cluster_path} | awk '{print \$1}' > ${params.uniprot_domain_ids_fn}
     """
-
 }
 
 process uniprot_domain_to_uniprot {
@@ -93,12 +94,11 @@ process uniprot_domain_to_uniprot {
     path uniprot_domain_id
 
     output:
-    path params.uniprot_ids_filename
+    path params.uniprot_ids_fn
 
     """
-    cat ${uniprot_domain_id} | tr '/' ' ' | awk '{print \$1}' > ${params.uniprot_ids_filename}
+    cat ${uniprot_domain_id} | tr '/' ' ' | awk '{print \$1}' > ${params.uniprot_ids_fn}
     """
-   
 }
 
 process chop_cif {
@@ -124,6 +124,90 @@ process chop_cif {
     """
 }
 
+process create_dataset_cath_files {
+    publishDir params.publish_dir, mode: 'copy'
+
+    input:
+    path 'uniprot_ids_csv'
+
+    output:
+    path params.uniprot_ids_csv_fn
+    path params.gene3d_crh_output_fn
+    path params.af_domainlist_ids_csv_fn
+    path params.af_chainlist_ids_csv_fn
+    path params.af_cath_orig_annotations_csv_fn
+
+    """
+    cath-af-cli create-dataset-cath-files \
+        --csv_uniprot_ids uniprot_ids_csv \
+        --csv_uniprot_md5 ${params.uniprot_md5_csv_fn} \
+        --gene3d_crh_output ${params.gene3d_crh_output_fn} \
+        --af_domainlist_ids ${params.af_domainlist_ids_csv_fn} \
+        --af_chainlist_ids ${params.af_chainlist_ids_csv_fn} \
+        --af_cath_annotations ${params.af_cath_orig_annotations_csv_fn} \
+        --dbname ${params.cath_odb_name} \
+    """
+}
+
+process create_dssp {
+    publishDir params.publish_dir, mode: 'copy'
+
+    input:
+    path 'uniprot_ids_csv'
+    path 'cif_chopped'
+
+    output:
+    path 'dssp/*.dssp'
+
+    """
+    mkdir dssp
+    cath-af-cli convert-cif-to-dssp \
+        --cif_in_dir cif_chopped \
+        --id_file uniprot_ids_csv \
+        --cif_suffix .cif.gz \
+        --dssp_out_dir dssp
+    """
+}
+
+process create_plddt_summary {
+    input:
+    path 'uniprot_ids_csv'
+    path 'cif_chopped'
+
+    output:
+    path params.plddt_stats_fn
+
+    """
+    cath-af-cli convert-cif-to-plddt-summary \
+        --cif_in_dir cif_chopped \
+        --id_file uniprot_ids_csv \
+        --plddt_stats_file ${params.plddt_stats_fn}
+    """
+}
+
+process af_domain_ids_from_cif_dir {
+    input:
+    path 'cif_dir'
+
+    output:
+    path 'af_models.txt'
+
+    """
+    ls cif_dir/ | grep ".cif" | sed 's/.cif\$//' > af_models.txt
+    """
+}
+
+process cif_to_pdb {
+    input:
+    path 'tmp.cif'
+
+    output:
+    path 'tmp.pdb'
+
+    """
+    pdb_fromcif tmp.cif > tmp.pdb
+    """
+}
 
 workflow AF_CHOP_CIF {
 
@@ -141,6 +225,28 @@ workflow AF_CHOP_CIF {
     chop_cif( uniprot_domain_ids_ch.splitText(by: 100, file: true), cif_files )
 }
 
+
+workflow AF_ANNOTATE_DOMAINS_CIF {
+
+    def cif_chopped_dir = file("${params.publish_dir}/${params.af_cif_chopped_dir}")
+    def cif_raw_dir = file("${params.publish_dir}/${params.af_cif_raw_dir}")
+    def plddt_file = file("${params.publish_dir}/${params.plddt_stats_fn}")
+
+    def af_domain_ids_ch = af_domain_ids_from_cif_dir(cif_chopped_dir)
+
+    def dataset_results = create_dataset_cath_files(af_domain_ids_ch)
+
+    create_dssp(af_domain_ids_ch, cif_raw_dir)
+
+    def af_domain_ids_chunked_ch = af_domain_ids_ch.splitText(by: 100, file: true)
+
+    def plddt_summary_ch = create_plddt_summary(af_domain_ids_chunked_ch, cif_raw_dir)
+    
+    plddt_summary_ch.collectFile(name: plddt_file)
+
+}
+
 workflow {
-    AF_CHOP_CIF ()
+    // AF_CHOP_CIF ()
+    AF_ANNOTATE_DOMAINS_CIF ()
 }
