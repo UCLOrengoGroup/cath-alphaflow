@@ -6,7 +6,12 @@ from cath_alphaflow.io_utils import (
     yield_first_col,
 )
 from cath_alphaflow.models import AFDomainID
-from cath_alphaflow.constants import DEFAULT_CIF_SUFFIX
+from cath_alphaflow.constants import (
+    DEFAULT_CIF_SUFFIX,
+    ID_TYPE_AF_DOMAIN,
+    ID_TYPE_UNIPROT_DOMAIN,
+    VALID_CIF_SUFFIXES,
+)
 from cath_alphaflow.chopping import chop_cif
 from cath_alphaflow.errors import ChoppingError
 
@@ -18,10 +23,7 @@ FILE_POLICY_OVERWRITE = "overwrite"
 DEFAULT_INPUT_FILE_POLICY = FILE_POLICY_SKIP
 DEFAULT_OUTPUT_FILE_POLICY = FILE_POLICY_SKIP
 
-ID_TYPE_AF_DOMAIN = "af"
-ID_TYPE_UNIPROT_DOMAIN = "uniprot"
 DEFAULT_AF_FRAGMENT_NUMBER = 1
-VALID_CIF_SUFFIXES = [".cif", ".cif.gz"]
 
 
 @click.command("chop-cif")
