@@ -148,3 +148,5 @@ config.env
 
 # local data
 dataset100k
+kinfams-results/
+kinfams-backup/
