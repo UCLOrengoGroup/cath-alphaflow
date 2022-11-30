@@ -7,8 +7,13 @@ from cath_alphaflow.io_utils import (
     yield_first_col,
     get_plddt_summary_writer,
 )
-from cath_alphaflow.models import LURSummary, pLDDTSummary
-from cath_alphaflow.constants import MIN_LENGTH_LUR
+from cath_alphaflow.models import AFDomainID, LURSummary, pLDDTSummary
+from cath_alphaflow.constants import (
+    MIN_LENGTH_LUR,
+    ID_TYPE_AF_DOMAIN,
+    ID_TYPE_UNIPROT_DOMAIN,
+)
+from cath_alphaflow.errors import ArgumentError
 
 LOG = logging.getLogger()
 
@@ -27,6 +32,12 @@ LOG = logging.getLogger()
     help="Input: CSV file containing list of ids to process from CIF to pLDDT",
 )
 @click.option(
+    "--id_type",
+    type=click.Choice([ID_TYPE_AF_DOMAIN, ID_TYPE_UNIPROT_DOMAIN]),
+    default=ID_TYPE_AF_DOMAIN,
+    help=f"Option: specify the type of ID to specify the chopping [{ID_TYPE_AF_DOMAIN}]",
+)
+@click.option(
     "--plddt_stats_file",
     type=click.File("wt"),
     required=True,
@@ -41,6 +52,7 @@ LOG = logging.getLogger()
 def convert_cif_to_plddt_summary(
     cif_in_dir,
     id_file,
+    id_type,
     plddt_stats_file,
     cif_suffix,
 ):
@@ -48,19 +60,32 @@ def convert_cif_to_plddt_summary(
 
     plddt_out_writer = get_plddt_summary_writer(plddt_stats_file)
 
-    for file_stub in yield_first_col(id_file):
+    for af_domain_id_str in yield_first_col(id_file):
+
+        if id_type == ID_TYPE_UNIPROT_DOMAIN:
+            af_domain_id = AFDomainID.from_uniprot_str(af_domain_id_str)
+        elif id_type == ID_TYPE_AF_DOMAIN:
+            af_domain_id = AFDomainID.from_str(af_domain_id_str)
+        else:
+            msg = f"failed to understand id_type '${id_type}'"
+            raise ArgumentError(msg)
+
+        file_stub = af_domain_id.af_chain_id
+        chopping = af_domain_id.chopping
+
         cif_path = Path(cif_in_dir) / f"{file_stub}{cif_suffix}"
         if not cif_path.exists():
             msg = f"failed to locate CIF input file {cif_path}"
             LOG.error(msg)
             raise FileNotFoundError(msg)
 
-        avg_plddt = get_average_plddt_from_plddt_string(cif_path)
-        perc_LUR_summary = get_LUR_residues_percentage(cif_path)
+        avg_plddt = get_average_plddt_from_plddt_string(cif_path, chopping=chopping)
+        perc_LUR_summary = get_LUR_residues_percentage(cif_path, chopping=chopping)
         plddt_stats = pLDDTSummary(
-            af_domain_id=file_stub,
+            af_domain_id=str(af_domain_id),
             avg_plddt=avg_plddt,
             perc_LUR=perc_LUR_summary.LUR_perc,
+            residues_total=perc_LUR_summary.residues_total,
         )
         plddt_out_writer.writerow(plddt_stats.__dict__)
 
