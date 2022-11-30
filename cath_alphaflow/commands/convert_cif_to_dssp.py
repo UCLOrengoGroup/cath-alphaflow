@@ -51,8 +51,8 @@ def convert_cif_to_dssp(cif_in_dir, id_file, cif_suffix, dssp_suffix, dssp_out_d
     "Converts CIF to DSSP files"
 
     for file_stub in yield_first_col(id_file):
-        cif_path = Path(cif_in_dir) / file_stub + cif_suffix
-        dssp_path = Path(dssp_out_dir) / file_stub + dssp_suffix
+        cif_path = Path(cif_in_dir) / (file_stub + cif_suffix)
+        dssp_path = Path(dssp_out_dir) / (file_stub + dssp_suffix)
         click.echo(f"Running DSSP: {cif_path} {dssp_path}")
         run_dssp(cif_path, dssp_path)
 
