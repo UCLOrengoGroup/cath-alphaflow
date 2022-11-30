@@ -37,6 +37,7 @@ setup(
         "cx_oracle",
         "prettyconf",
         "biopython",
+        "pdb-tools",
     ],
     extras_require={"test": ["pytest"]},
     python_requires=">=3.7",
