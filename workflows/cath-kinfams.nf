@@ -16,7 +16,7 @@ params.dataset_name = 'dataset100k'
 params.dataset_max_records = '100000'
 params.dataset_max_evalue = '1E-50'
 
-params.publish_dir = "$workflow.projectDir/kinfams-results"
+params.publish_dir = "$workflow.launchDir/kinfams-results"
 
 params.af_version = 4
 params.af_download_stem = "gs://public-datasets-deepmind-alphafold-v${params.af_version}"
@@ -34,6 +34,7 @@ params.uniprot_domain_ids_fn = "uniprot_domain_id.txt"
 params.af_manifest_fn = "af_manifest.txt"
 params.af_cif_raw_dir = "cif_raw"
 params.af_cif_chopped_dir = "cif_chopped"
+params.af_dssp_raw_dir = "dssp_raw"
 params.plddt_stats_fn = "plddt_summary.csv"
 
 
@@ -131,7 +132,7 @@ process create_dataset_cath_files {
     path 'uniprot_ids_csv'
 
     output:
-    path params.uniprot_ids_csv_fn
+    path params.uniprot_md5_csv_fn
     path params.gene3d_crh_output_fn
     path params.af_domainlist_ids_csv_fn
     path params.af_chainlist_ids_csv_fn
@@ -154,18 +155,38 @@ process create_dssp {
 
     input:
     path 'uniprot_ids_csv'
-    path 'cif_chopped'
+    path 'cif_dir'
+    path dssp_dir
 
     output:
-    path 'dssp/*.dssp'
+    path "${dssp_dir}/*.dssp"
 
     """
     mkdir dssp
     cath-af-cli convert-cif-to-dssp \
-        --cif_in_dir cif_chopped \
+        --cif_in_dir cif_dir \
         --id_file uniprot_ids_csv \
-        --cif_suffix .cif.gz \
-        --dssp_out_dir dssp
+        --cif_suffix .cif \
+        --dssp_out_dir ${dssp_dir}
+    """
+}
+
+
+process create_sse_summary {
+    publishDir params.publish_dir, mode: 'copy'
+
+    input:
+    path 'uniprot_ids_csv'
+    path 'dssp_dir'
+
+    output:
+    path 'dssp_summary.csv'
+
+    """
+    cath-af-cli convert-dssp-to-sse-summary \
+        --dssp_dir dssp_dir \
+        --id_file uniprot_ids_csv \
+        --sse_out_file dssp_summary.csv
     """
 }
 
@@ -182,6 +203,18 @@ process create_plddt_summary {
         --cif_in_dir cif_chopped \
         --id_file uniprot_ids_csv \
         --plddt_stats_file ${params.plddt_stats_fn}
+    """
+}
+
+process ids_from_cif_dir {
+    input:
+    path 'cif_dir'
+
+    output:
+    path 'ids.txt'
+
+    """
+    ls cif_dir/ | grep ".cif" | sed 's/.cif\$//' > ids.txt
     """
 }
 
@@ -209,6 +242,19 @@ process cif_to_pdb {
     """
 }
 
+process uniprot_csv_from_af_domains {
+    input:
+    path af_domain_id_file
+
+    output:
+    path 'uniprot_ids.csv'
+
+    """
+    echo uniprot_acc > uniprot_ids.csv
+    cat ${af_domain_id_file} | tr '-' ' ' | awk '{print \$2}' >> uniprot_ids.csv
+    """
+}
+
 workflow AF_CHOP_CIF {
 
     def kinfams_ch = Channel.fromPath(params.af_to_cluster_file, checkIfExists: true)
@@ -225,24 +271,31 @@ workflow AF_CHOP_CIF {
     chop_cif( uniprot_domain_ids_ch.splitText(by: 100, file: true), cif_files )
 }
 
-
 workflow AF_ANNOTATE_DOMAINS_CIF {
 
     def cif_chopped_dir = file("${params.publish_dir}/${params.af_cif_chopped_dir}")
     def cif_raw_dir = file("${params.publish_dir}/${params.af_cif_raw_dir}")
+    def dssp_raw_dir = file("${params.publish_dir}/${params.af_dssp_raw_dir}")
     def plddt_file = file("${params.publish_dir}/${params.plddt_stats_fn}")
 
     def af_domain_ids_ch = af_domain_ids_from_cif_dir(cif_chopped_dir)
+    def cif_ids_ch = ids_from_cif_dir(cif_raw_dir).splitText(by: 100, file: true)
 
-    def dataset_results = create_dataset_cath_files(af_domain_ids_ch)
+    def uniprot_csv_ch = uniprot_csv_from_af_domains(af_domain_ids_ch)
 
-    create_dssp(af_domain_ids_ch, cif_raw_dir)
+    def uniprot_dataset = create_dataset_cath_files(uniprot_csv_ch)
+
+    def dssp_files_ch = create_dssp(cif_ids_ch, cif_raw_dir, dssp_raw_dir)
 
     def af_domain_ids_chunked_ch = af_domain_ids_ch.splitText(by: 100, file: true)
 
     def plddt_summary_ch = create_plddt_summary(af_domain_ids_chunked_ch, cif_raw_dir)
     
     plddt_summary_ch.collectFile(name: plddt_file)
+
+    dssp_files_ch.collect()
+
+    create_sse_summary(af_domain_ids_ch, dssp_raw_dir)
 
 }
 
