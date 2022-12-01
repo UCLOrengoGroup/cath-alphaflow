@@ -138,7 +138,7 @@ dmypy.json
 # nextflow
 .nextflow/
 work/
-.nextflow.log.*
+.nextflow.*
 dataset10k*
 dataset100k*
 config.env
@@ -148,3 +148,5 @@ config.env
 
 # local data
 dataset100k
+kinfams-results/
+kinfams-backup/

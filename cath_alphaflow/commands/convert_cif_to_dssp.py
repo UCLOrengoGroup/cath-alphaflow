@@ -51,8 +51,8 @@ def convert_cif_to_dssp(cif_in_dir, id_file, cif_suffix, dssp_suffix, dssp_out_d
     "Converts CIF to DSSP files"
 
     for file_stub in yield_first_col(id_file):
-        cif_path = Path(cif_in_dir) / file_stub + cif_suffix
-        dssp_path = Path(dssp_out_dir) / file_stub + dssp_suffix
+        cif_path = Path(cif_in_dir) / (file_stub + cif_suffix)
+        dssp_path = Path(dssp_out_dir) / (file_stub + dssp_suffix)
         click.echo(f"Running DSSP: {cif_path} {dssp_path}")
         run_dssp(cif_path, dssp_path)
 
@@ -71,16 +71,31 @@ def run_dssp(cif_path: Path, dssp_path: Path):
         LOG.error(msg)
         raise FileNotFoundError(msg)
 
-    subprocess.call(
+    args = [
+        DSSP_BINARY_PATH,
+    ]
+
+    if not DSSP_PDB_DICT is None:
+        args.extend(
+            [
+                "--mmcif-dictionary",
+                DSSP_PDB_DICT,
+            ]
+        )
+
+    args.extend(
         [
-            DSSP_BINARY_PATH,
-            "--mmcif-dictionary",
-            DSSP_PDB_DICT,
             "--output-format",
             "dssp",
             f"{cif_path}",
             f"{dssp_path}",
-        ],
+        ]
+    )
+
+    LOG.info(f"Running: `{' '.join(args)}`")
+
+    subprocess.run(
+        args,
         stderr=subprocess.DEVNULL,
         check=True,
     )

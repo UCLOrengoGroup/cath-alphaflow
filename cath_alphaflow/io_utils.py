@@ -60,6 +60,7 @@ def get_plddt_summary_writer(csvfile):
             "af_domain_id",
             "avg_plddt",
             "perc_LUR",
+            "residues_total",
         ],
     )
     writer.writeheader()

@@ -10,7 +10,7 @@ class Settings:
     ORACLE_DB_SID = config("ORACLE_DB_SID", default=None)
     ORACLE_DB_USERNAME = config("ORACLE_DB_USERNAME", default=None)
     ORACLE_DB_PASSWORD = config("ORACLE_DB_PASSWORD", default=None)
-    DSSP_BINARY_PATH = config("DSSP_BINARY_PATH", default=None)
+    DSSP_BINARY_PATH = config("DSSP_BINARY_PATH", default="mkdssp")
     DSSP_PDB_DICT = config("DSSP_PDB_DICT", default=None)
 
     def to_dict(self):
