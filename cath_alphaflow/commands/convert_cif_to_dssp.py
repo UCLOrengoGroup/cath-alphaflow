@@ -71,16 +71,31 @@ def run_dssp(cif_path: Path, dssp_path: Path):
         LOG.error(msg)
         raise FileNotFoundError(msg)
 
-    subprocess.call(
+    args = [
+        DSSP_BINARY_PATH,
+    ]
+
+    if not DSSP_PDB_DICT is None:
+        args.extend(
+            [
+                "--mmcif-dictionary",
+                DSSP_PDB_DICT,
+            ]
+        )
+
+    args.extend(
         [
-            DSSP_BINARY_PATH,
-            "--mmcif-dictionary",
-            DSSP_PDB_DICT,
             "--output-format",
             "dssp",
             f"{cif_path}",
             f"{dssp_path}",
-        ],
+        ]
+    )
+
+    LOG.info(f"Running: `{' '.join(args)}`")
+
+    subprocess.run(
+        args,
         stderr=subprocess.DEVNULL,
         check=True,
     )
