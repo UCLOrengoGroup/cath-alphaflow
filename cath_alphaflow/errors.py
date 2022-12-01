@@ -6,6 +6,10 @@ class ParseError(BaseError):
     pass
 
 
+class ArgumentError(BaseError):
+    pass
+
+
 class NoMatchingFragmentError(BaseError):
     pass
 
