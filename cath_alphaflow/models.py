@@ -16,11 +16,11 @@ RE_AF_CHAIN_ID = re.compile(
 )
 
 RE_AF_DOMAIN_ID = re.compile(
-    r"^AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9])-model_v(?P<version>[0-9]+)/(?P<chopping>[0-9\-_]+)$"
+    r"^AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9])-model_v(?P<version>[0-9]+)[/\-](?P<chopping>[0-9\-_]+)$"
 )
 
 RE_UNIPROT_DOMAIN_ID = re.compile(
-    r"^(?P<uniprot_acc>[0-9A-Z]+)/(?P<chopping>[0-9\-_]+)$"
+    r"^(?P<uniprot_acc>[0-9A-Z]+)[/\-](?P<chopping>[0-9\-_]+)$"
 )
 
 LOG = logging.getLogger(__name__)
@@ -76,6 +76,10 @@ class Chopping:
     def deep_copy(self):
         new_segments = [s.deep_copy() for s in self.segments]
         return Chopping(segments=new_segments)
+
+    def residue_count(self):
+        res_count = sum([seg.end - seg.start + 1 for seg in self.segments])
+        return res_count
 
     @property
     def first_residue(self):
@@ -306,5 +310,4 @@ class pLDDTSummary:
     af_domain_id: str
     avg_plddt: float
     perc_LUR: float
-    LUR_residues: int
-    total_residues: int
+    residues_total: int
