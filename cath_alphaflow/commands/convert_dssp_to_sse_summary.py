@@ -17,6 +17,7 @@ from cath_alphaflow.io_utils import (
 from cath_alphaflow.models import SecStrSummary, AFDomainID
 from cath_alphaflow.constants import (
     DEFAULT_DSSP_SUFFIX,
+    ID_TYPE_SIMPLE,
     ID_TYPE_AF_DOMAIN,
     ID_TYPE_UNIPROT_DOMAIN,
 )
@@ -37,9 +38,9 @@ from cath_alphaflow.constants import (
 )
 @click.option(
     "--id_type",
-    type=click.Choice([ID_TYPE_AF_DOMAIN, ID_TYPE_UNIPROT_DOMAIN]),
-    default=ID_TYPE_AF_DOMAIN,
-    help=f"Option: specify the type of ID to specify the chopping [{ID_TYPE_AF_DOMAIN}]",
+    type=click.Choice([ID_TYPE_SIMPLE, ID_TYPE_AF_DOMAIN, ID_TYPE_UNIPROT_DOMAIN]),
+    default=ID_TYPE_SIMPLE,
+    help=f"Option: specify the type of ID to specify the chopping [{ID_TYPE_SIMPLE}]",
 )
 @click.option(
     "--sse_out_file",
@@ -83,25 +84,37 @@ def convert_dssp_to_sse_summary(
 
     for id_str in yield_first_col(id_file):
 
-        if id_type == ID_TYPE_AF_DOMAIN:
-            af_domain_id = AFDomainID.from_str(id_str)
+        click.echo(f"Processing '{id_str}' (id:{id_type}) ...")
+
+        dssp_file_stub = None
+        acc_id = None
+        chopping = None
+        if id_type == ID_TYPE_SIMPLE:
+            dssp_file_stub = id_str
+            acc_id = id_str
+        elif id_type == ID_TYPE_AF_DOMAIN:
+            _af_domain_id = AFDomainID.from_str(id_str)
+            acc_id = _af_domain_id.to_file_stub()
+            dssp_file_stub = _af_domain_id.af_chain_id
+            chopping = _af_domain_id.chopping
         elif id_type == ID_TYPE_UNIPROT_DOMAIN:
-            af_domain_id = AFDomainID.from_uniprot_str(id_str, version=af_version)
+            _af_domain_id = AFDomainID.from_uniprot_str(id_str, version=af_version)
+            acc_id = _af_domain_id.to_file_stub()
+            dssp_file_stub = _af_domain_id.af_chain_id
+            chopping = _af_domain_id.chopping
         else:
             raise click.UsageError(f"failed to recognise id_type={id_type}")
 
-        file_stub = af_domain_id.af_chain_id
-        click.echo(f"Processing {af_domain_id} ...")
-        dssp_path = Path(dssp_dir) / f"{file_stub}{dssp_suffix}"
+        dssp_path = Path(dssp_dir) / f"{dssp_file_stub}{dssp_suffix}"
 
         try:
             ss_sum = get_sse_summary_from_dssp(
                 dssp_path,
-                acc_id=af_domain_id.to_file_stub(),
-                chopping=af_domain_id.chopping,
+                acc_id=acc_id,
+                chopping=chopping,
             )
         except ParseError:
-            msg = f"failed to get SSE summary for entry {af_domain_id}"
+            msg = f"failed to get SSE summary for entry {acc_id}"
             if dssp_check_policy == FILE_POLICY_SKIP:
                 LOG.warning(f"{msg} (skipping)")
                 continue
