@@ -61,7 +61,7 @@ DEFAULT_CHUNK_SIZE = 1000
     help="Param: size of chunk when processing data",
 )
 @click.option(
-    "--version",
+    "--af_version",
     "af_version",
     type=str,
     default=DEFAULT_AF_VERSION,
