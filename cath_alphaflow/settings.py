@@ -1,6 +1,6 @@
 from prettyconf import config
 
-DEFAULT_AF_VERSION = 3
+DEFAULT_AF_VERSION = 4
 DEFAULT_AF_FRAGMENT = 1
 
 
