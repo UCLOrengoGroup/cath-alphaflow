@@ -254,8 +254,8 @@ class SecStrSummary:
     @classmethod
     def new_from_dssp_str(
         cls,
-        dssp_str,
-        acc_id,
+        dssp_str: str,
+        acc_id: str,
         *,
         min_helix_length=DEFAULT_HELIX_MIN_LENGTH,
         min_strand_length=DEFAULT_STRAND_MIN_LENGTH,
