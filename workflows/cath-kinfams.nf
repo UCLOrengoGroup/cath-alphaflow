@@ -37,12 +37,13 @@ params.af_cif_chopped_dir = "cif_chopped"
 params.af_dssp_raw_dir = "dssp_raw"
 params.plddt_stats_fn = "plddt_summary.csv"
 
+def uniprot_ids_file = file("${params.publish_dir}/${params.uniprot_ids_csv_fn}")
 
 // A0A0S2Z4D1/43-337 kinases_4.3-FF-000306.faa
 // Q15831/43-337 kinases_4.3-FF-000306.faa
 
 process create_af_manifest_file {
-    publishDir params.publish_dir, mode: 'copy', overwrite: true
+    publishDir params.publish_dir, mode: 'copy'
 
     input:
     path uniprot_id_file
@@ -56,7 +57,7 @@ process create_af_manifest_file {
 }
 
 process retrieve_af_chain_cif_files {
-    publishDir params.af_cif_raw_dir, mode: 'copy', overwrite: true
+    publishDir params.af_cif_raw_dir, mode: 'copy'
 
     input:
     path af_model_urls_file
@@ -74,8 +75,19 @@ process retrieve_af_chain_cif_files {
     """
 }
 
+process retrieve_af_fasta_database {
+    publishDir params.publish_dir, mode: 'copy', overwrite: false
+
+    output:
+    path 'sequences.fasta'
+
+    """
+    gsutil -m cp ${params.af_download_stem}/seqeunces.fasta .
+    """
+}
+
 process kinfam_clusters_to_uniprot_domain_ids {
-    publishDir params.publish_dir, mode: 'copy', overwrite: true
+    publishDir params.publish_dir, mode: 'copy'
 
     input:
     path cluster_path
@@ -89,7 +101,7 @@ process kinfam_clusters_to_uniprot_domain_ids {
 }
 
 process uniprot_domain_to_uniprot {
-    publishDir params.publish_dir, mode: 'copy', overwrite: true
+    publishDir params.publish_dir, mode: 'copy'
 
     input:
     path uniprot_domain_id
@@ -103,7 +115,7 @@ process uniprot_domain_to_uniprot {
 }
 
 process chop_cif {
-    publishDir params.publish_dir, mode: 'copy', overwrite: true
+    publishDir params.publish_dir, mode: 'copy'
 
     input:
     path uniprot_ids_file
@@ -255,21 +267,39 @@ process uniprot_csv_from_af_domains {
     """
 }
 
+process create_af_uniprot_md5_from_fasta {
+    input:
+    path af_full_fasta_ch
+    path uniprot_domain_ids_ch
+
+    output:
+    path 'af_uniprot_md5.csv' 
+
+    """
+    cath-af-cli calculate-md5 \
+        --fasta ${af_full_fasta_ch} \
+        --id_file ${uniprot_domain_ids_ch} \
+        --id_type uniprot_domain_id \
+        --uniprot_md5_csv af_uniprot_md5.csv
+    """
+}
+
 workflow AF_CHOP_CIF {
 
-    def kinfams_ch = Channel.fromPath(params.af_to_cluster_file, checkIfExists: true)
+    take:
+        uniprot_domain_ids_ch
+    
+    main:
+        def cif_files = uniprot_domain_ids_ch.splitText(by: 100, file: true)
+            | uniprot_domain_to_uniprot
+            | create_af_manifest_file
+            | retrieve_af_chain_cif_files
 
-    def uniprot_domain_ids_ch = kinfam_clusters_to_uniprot_domain_ids(kinfams_ch)
+        cif_files.collect()
 
-    def cif_files = uniprot_domain_ids_ch.splitText(by: 100, file: true)
-        | uniprot_domain_to_uniprot
-        | create_af_manifest_file
-        | retrieve_af_chain_cif_files
-
-    cif_files.collect()
-
-    chop_cif( uniprot_domain_ids_ch.splitText(by: 100, file: true), cif_files )
+        chop_cif( uniprot_domain_ids_ch.splitText(by: 100, file: true), cif_files )
 }
+
 
 workflow AF_ANNOTATE_DOMAINS_CIF {
 
@@ -300,6 +330,17 @@ workflow AF_ANNOTATE_DOMAINS_CIF {
 }
 
 workflow {
-    // AF_CHOP_CIF ()
+    def kinfams_ch = Channel.fromPath(params.af_to_cluster_file, checkIfExists: true)
+
+    def af_full_fasta_ch = retrieve_af_fasta_database()
+
+    def uniprot_domain_ids_ch = kinfam_clusters_to_uniprot_domain_ids(kinfams_ch)
+
+    def uniprot_csv_ch = uniprot_csv_from_af_domains(uniprot_domain_ids_ch)
+    def uniprot_dataset = create_dataset_cath_files(uniprot_csv_ch)
+
+    def af_uniprot_md5_ch = create_af_uniprot_md5_from_fasta(af_full_fasta_ch, uniprot_domain_ids_ch)
+
+    AF_CHOP_CIF (uniprot_domain_ids_ch)
     AF_ANNOTATE_DOMAINS_CIF ()
 }
