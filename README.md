@@ -11,15 +11,15 @@ The pipeline aims to take advantage of a modern workflow framework (Nextflow) to
 
 **Protein Domain** - proteins are often made of one or more protein domains, where each domain is defined as a globular, compact, semi-independently folding structural unit.
 
-**CATH** - [https://www.cathdb.info](CATH) is a resource that "chops" domains from
+**CATH** - [CATH](https://www.cathdb.info) is a resource that "chops" domains from
 3D coordinates from experimental data (wwPDB) and assigns these structural domains into homologous
 superfamilies (i.e. domains that are related by evolution).
 
-**AlphaFold** - [https://alphafold.ebi.ac.uk/](AlphaFold) is a protein structure prediction algorithm written by DeepMind that is capable of predicting protein 3D coordinates directly from amino acid sequence to a high degree of accuracy.
+**AlphaFold** - [AlphaFold](https://alphafold.ebi.ac.uk/) is a protein structure prediction algorithm written by DeepMind that is capable of predicting protein 3D coordinates directly from amino acid sequence to a high degree of accuracy.
 
-**3D Beacons** - [https://www.ebi.ac.uk/pdbe/pdbe-kb/3dbeacons/](3D-Beacons) is an open collaboration between providers of macromolecular structure models. This collaboration aims to provide model coordinates and meta-information from all the contributing data resources in a standardised data format, on a unified platform.
+**3D Beacons** - [3D Beacons](https://www.ebi.ac.uk/pdbe/pdbe-kb/3dbeacons/) is an open collaboration between providers of macromolecular structure models. This collaboration aims to provide model coordinates and meta-information from all the contributing data resources in a standardised data format, on a unified platform.
 
-**NextFlow** - [https://www.nextflow.io/](NextFlow) enables scalable and reproducible scientific workflows using software containers. It allows the adaptation of pipelines written in the most common scripting languages.
+**NextFlow** - [NextFlow](https://www.nextflow.io/) enables scalable and reproducible scientific workflows using software containers. It allows the adaptation of pipelines written in the most common scripting languages.
 
 ## Project
 
