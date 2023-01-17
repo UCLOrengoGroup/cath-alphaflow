@@ -91,7 +91,7 @@ process uniprot_domain_to_uniprot {
 }
 
 workflow {
-    def uniprot_domain_ids_ch = Channel.fromPath("${params.dataset_dir}/${params.uniprot_ids_csv_fn}", checkIfExists: true)
+    def uniprot_domain_ids_ch = Channel.fromPath("${params.dataset_dir}/${params.uniprot_domain_ids_csv_fn}", checkIfExists: true)
 
     def cif_files = uniprot_domain_ids_ch.splitText(by: 10, file: true)
         | uniprot_domain_to_uniprot
@@ -100,5 +100,13 @@ workflow {
 
     cif_files.collect()
 
-    chop_cif( uniprot_domain_ids_ch.splitText(by: 10, file: true), cif_files )
+    // not all of the uniprot accessions will have AF models
+    // of the AF models we do have, we would expect to be able to chop all of them without error
+    def existing_uniprot_ids = cif_files.flatten().map { n -> n.name.split('-')[1] }.collect().unique()
+
+    def existing_uniprot_domain_ids_ch = uniprot_domain_ids_ch.splitText(by: 100, file: true).filter {
+        n -> existing_uniprot_ids.contains(n.name.split('/')[0])
+    }
+
+    chop_cif( existing_uniprot_domain_ids_ch.splitText(by: 10, file: true), cif_files )
 }
