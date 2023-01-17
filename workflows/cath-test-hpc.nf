@@ -57,7 +57,7 @@ process chop_cif {
     publishDir params.publish_dir, mode: 'copy'
 
     input:
-    path uniprot_ids_file
+    path uniprot_domain_ids_file
     path raw_cif_files
 
     output:
@@ -66,8 +66,8 @@ process chop_cif {
     """
     mkdir cif_chopped
     cath-af-cli chop-cif \
-        --cif_in_dir ${params.af_cif_raw_dir} \
-        --id_file ${uniprot_ids_file} \
+        --cif_in_dir . \
+        --id_file ${uniprot_domain_ids_file} \
         --cif_out_dir cif_chopped/ \
         --id_type uniprot \
         --input_file_policy skip \
