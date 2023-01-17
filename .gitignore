@@ -150,3 +150,5 @@ config.env
 dataset100k
 kinfams-results/
 kinfams-backup/
+datasets/
+cath-test-hpc-dataset100/
