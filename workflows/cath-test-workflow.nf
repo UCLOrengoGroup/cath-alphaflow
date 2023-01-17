@@ -19,6 +19,7 @@ params.af_manifest_fn = "af_manifest.txt"
 params.af_cif_raw_dir = "cif_raw"
 params.af_cif_chopped_dir = "cif_chopped"
 
+params.uniprot_ids_downloaded_csv_fn = "uniprot_ids.downloaded.csv"
 
 process create_af_manifest_file {
     publishDir params.publish_dir, mode: 'copy'
@@ -35,7 +36,7 @@ process create_af_manifest_file {
 }
 
 process retrieve_af_chain_cif_files {
-    publishDir params.af_cif_raw_dir, mode: 'copy'
+    publishDir "${params.publish_dir}/${params.af_cif_raw_dir}", mode: 'copy'
 
     input:
     path af_model_urls_file
@@ -44,7 +45,8 @@ process retrieve_af_chain_cif_files {
     path "AF-*.cif", optional: true
 
     // If Google returns 401 errors then make sure you have logged in:
-    //   gcloud auth application-default login
+    // 
+    // gcloud auth application-default login
     //
     // see: https://www.nextflow.io/docs/latest/google.html
 
@@ -57,18 +59,26 @@ process chop_cif {
     publishDir params.publish_dir, mode: 'copy'
 
     input:
-    path uniprot_domain_ids_file
     path raw_cif_files
-
+    path full_uniprot_domain_ids_file
+ 
     output:
-    path 'cif_chopped/*.cif'
+    path "${params.af_cif_chopped_dir}/*.cif"
 
     """
-    mkdir cif_chopped
+    mkdir ${params.af_cif_chopped_dir}
+
+    # get a list of uniprot accessions from CIF files
+    find . -name "*.cif" | tr '-' ' ' | awk '{print \$2}' | sort | uniq > uniprot_ids.txt
+
+    # extract the uniprot domain ids for which we have CIF files
+    grep -F -f uniprot_ids.txt ${full_uniprot_domain_ids_file} > uniprot_domain_ids.txt
+
+    # do the chopping
     cath-af-cli chop-cif \
         --cif_in_dir . \
-        --id_file ${uniprot_domain_ids_file} \
-        --cif_out_dir cif_chopped/ \
+        --id_file uniprot_domain_ids.txt \
+        --cif_out_dir ${params.af_cif_chopped_dir}/ \
         --id_type uniprot \
         --input_file_policy skip \
         --output_file_policy skip \
@@ -77,8 +87,6 @@ process chop_cif {
 }
 
 process uniprot_domain_to_uniprot {
-    publishDir params.publish_dir, mode: 'copy'
-
     input:
     path uniprot_domain_id
 
@@ -91,22 +99,15 @@ process uniprot_domain_to_uniprot {
 }
 
 workflow {
-    def uniprot_domain_ids_ch = Channel.fromPath("${params.dataset_dir}/${params.uniprot_domain_ids_csv_fn}", checkIfExists: true)
+    def uniprot_domain_ids_path = "${params.dataset_dir}/${params.uniprot_domain_ids_csv_fn}"
 
+    def uniprot_domain_ids_ch = Channel.fromPath(uniprot_domain_ids_path, checkIfExists: true)
+    
     def cif_files = uniprot_domain_ids_ch.splitText(by: 10, file: true)
         | uniprot_domain_to_uniprot
+        // probably need to unique() ?
         | create_af_manifest_file
         | retrieve_af_chain_cif_files
-
-    cif_files.collect()
-
-    // not all of the uniprot accessions will have AF models
-    // of the AF models we do have, we would expect to be able to chop all of them without error
-    def existing_uniprot_ids = cif_files.flatten().map { n -> n.name.split('-')[1] }.collect().unique()
-
-    def existing_uniprot_domain_ids_ch = uniprot_domain_ids_ch.splitText(by: 100, file: true).filter {
-        n -> existing_uniprot_ids.contains(n.name.split('/')[0])
-    }
-
-    chop_cif( existing_uniprot_domain_ids_ch.splitText(by: 10, file: true), cif_files )
+    
+    chop_cif( cif_files, uniprot_domain_ids_path )
 }
