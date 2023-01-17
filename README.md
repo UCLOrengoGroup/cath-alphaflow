@@ -56,3 +56,47 @@ Running the local tests
 ```
 pytest
 ```
+
+## Nextflow
+
+Install NextFlow (more details [here](https://www.nextflow.io/index.html#GetStarted))
+
+```bash
+curl -s https://get.nextflow.io | bash
+```
+
+Run the basic workflow via:
+
+```bash
+./nextflow run -resume workflows/cath-test-workflow.nf
+```
+
+Notes:
+
+- the `-resume` flag instructs NextFlow to use cached data where possible
+- running this workflow will currently fail without the steps below
+
+One of the steps in the basic workflow tries to download files from Google Storage. This requires you to be logged into Google via the `gcloud` utility (more detail [here](https://cloud.google.com/sdk/docs/install)).
+
+```bash
+gcloud auth application-default login
+```
+
+Now running the workflow should run successfully...
+
+```bash
+$ ./nextflow run -resume workflows/cath-test-hpc.nf
+N E X T F L O W ~ version 22.10.3
+Launching `workflows/cath-test-hpc.nf` [maniac_bhabha] DSL2 - revision: 21b594e11a
+executor > local (48)
+[21/0dcefb] process > uniprot_domain_to_uniprot (51) [100%] 51 of 51, cached: 51 ✔
+[4c/3b022d] process > create_af_manifest_file (31) [100%] 51 of 51, cached: 51 ✔
+[da/f74788] process > retrieve_af_chain_cif_files (47) [100%] 51 of 51, cached: 49 ✔
+[40/074465] process > chop_cif (42) [100%] 46 of 46 ✔
+Completed at: 17-Jan-2023 15:25:49
+Duration : 1m 8s
+CPU hours : 0.3 (32.1% cached)
+Succeeded : 48
+Cached : 151
+
+```
