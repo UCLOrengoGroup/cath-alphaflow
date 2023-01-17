@@ -41,7 +41,7 @@ process retrieve_af_chain_cif_files {
     path af_model_urls_file
 
     output:
-    path "AF-*.cif"
+    path "AF-*.cif", optional: true
 
     // If Google returns 401 errors then make sure you have logged in:
     //   gcloud auth application-default login
