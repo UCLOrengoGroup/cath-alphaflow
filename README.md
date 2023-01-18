@@ -76,7 +76,7 @@ Notes:
 - the `-resume` flag instructs NextFlow to use cached data where possible
 - running this workflow will currently fail without the steps below
 
-One of the steps in the basic workflow tries to download files from Google Storage. This requires you to be logged into Google via the `gcloud` utility (more detail [here](https://cloud.google.com/sdk/docs/install)).
+One of the steps in the basic workflow tries to download files from Google Storage. This requires you to be logged into Google via the `gcloud` utility (more details [here](https://cloud.google.com/sdk/docs/install)).
 
 ```bash
 gcloud auth application-default login
@@ -85,9 +85,9 @@ gcloud auth application-default login
 Now running the workflow should run successfully...
 
 ```bash
-$ ./nextflow run -resume workflows/cath-test-hpc.nf
+$ ./nextflow run -resume workflows/cath-test-workflow.nf
 N E X T F L O W ~ version 22.10.3
-Launching `workflows/cath-test-hpc.nf` [maniac_bhabha] DSL2 - revision: 21b594e11a
+Launching `workflows/cath-test-workflow.nf` [maniac_bhabha] DSL2 - revision: 21b594e11a
 executor > local (48)
 [21/0dcefb] process > uniprot_domain_to_uniprot (51) [100%] 51 of 51, cached: 51 ✔
 [4c/3b022d] process > create_af_manifest_file (31) [100%] 51 of 51, cached: 51 ✔
