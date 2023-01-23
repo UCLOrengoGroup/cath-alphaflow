@@ -38,6 +38,8 @@ setup(
         "prettyconf",
         "biopython",
         "pdb-tools",
+        "pydantic",
+        "pymongo",
     ],
     extras_require={"test": ["pytest"]},
     python_requires=">=3.7",
