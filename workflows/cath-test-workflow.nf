@@ -22,8 +22,6 @@ params.af_cif_chopped_dir = "cif_chopped"
 params.uniprot_ids_downloaded_csv_fn = "uniprot_ids.downloaded.csv"
 
 process create_af_manifest_file {
-    publishDir params.publish_dir, mode: 'copy'
-
     input:
     path uniprot_id_file
     
@@ -51,7 +49,7 @@ process retrieve_af_chain_cif_files {
     // see: https://www.nextflow.io/docs/latest/google.html
 
     """
-    cat ${af_model_urls_file} | (gsutil -m cp -I . || echo "Ignoring non-zero exit code: \$?")
+    cat ${af_model_urls_file} | (gsutil -o GSUtil:parallel_process_count=1 -m cp -I . || echo "Ignoring non-zero exit code: \$?")
     """
 }
 
@@ -94,20 +92,59 @@ process uniprot_domain_to_uniprot {
     path params.uniprot_ids_csv_fn
 
     """
-    cat ${uniprot_domain_id} | tr '/' ' ' | awk '{print \$1}' > ${params.uniprot_ids_csv_fn}
+    cat ${uniprot_domain_id} | tr '/' ' ' | awk '{print \$1}' | sort | uniq  > ${params.uniprot_ids_csv_fn}
+    """
+}
+
+process cif_paths_to_uniprot_accessions {
+    input: 
+    path 'cif_paths.txt'
+
+    output:
+    path 'uniprot_ids.txt'
+
+    """
+    cat cif_paths.txt | perl -ne '/AF-(\\w+)-/ && print "\$1\\n"' | sort | uniq > uniprot_ids.txt
+    """
+}
+
+process create_missing_uniprot_domain_ids {
+    input:
+    path 'found_uniprot_ids.txt'
+    path 'all_uniprot_domain_ids.txt'
+
+    output:
+    path 'missing_uniprot_domain_ids.txt'
+
+    """
+    grep -F -v -f found_uniprot_ids.txt all_uniprot_domain_ids.txt > missing_uniprot_domain_ids.txt
     """
 }
 
 workflow {
     def uniprot_domain_ids_path = "${params.dataset_dir}/${params.uniprot_domain_ids_csv_fn}"
 
-    def uniprot_domain_ids_ch = Channel.fromPath(uniprot_domain_ids_path, checkIfExists: true)
-    
-    def cif_files = uniprot_domain_ids_ch.splitText(by: 10, file: true)
+    def all_uniprot_domain_ids_ch = Channel.fromPath(uniprot_domain_ids_path, checkIfExists: true)
+
+    // reduce the list of uniprot domains to a list of unique uniprot accessions 
+    def all_uniprot_ids_ch = all_uniprot_domain_ids_ch
         | uniprot_domain_to_uniprot
-        // probably need to unique() ?
+
+    // split this into smaller chunks, retrieve files (download from AF), collect file paths
+    def all_cif_files = all_uniprot_ids_ch.splitText(by: 10, file: true)
         | create_af_manifest_file
         | retrieve_af_chain_cif_files
-    
-    chop_cif( cif_files, uniprot_domain_ids_path )
+
+    // actually chop the CIF files according to the CATH domain definitions 
+    chop_cif( all_cif_files, uniprot_domain_ids_path )
+
+    // find out the uniprot ids that have been successfully downloaded
+    def downloaded_uniprot_ids_ch = all_cif_files
+        | cif_paths_to_uniprot_accessions
+
+    // create a list of all the uniprot domain ids that have not been downloaded 
+    def undownloaded_uniprot_domain_ids_ch = create_missing_uniprot_domain_ids(
+        downloaded_uniprot_ids_ch,
+        all_uniprot_domain_ids_ch
+    )
 }
