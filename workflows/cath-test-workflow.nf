@@ -22,8 +22,6 @@ params.af_cif_chopped_dir = "cif_chopped"
 params.uniprot_ids_downloaded_csv_fn = "uniprot_ids.downloaded.csv"
 
 process create_af_manifest_file {
-    publishDir params.publish_dir, mode: 'copy'
-
     input:
     path uniprot_id_file
     
