@@ -64,7 +64,8 @@ Install NextFlow (more details [here](https://www.nextflow.io/index.html#GetStar
 ```bash
 curl -s https://get.nextflow.io | bash
 ```
-It's also possible to install Nextflwo via a pythong wrapper package, this also automatically adds it to the path
+
+It's also possible to install Nextflow via a python wrapper package, this automatically adds it to the path
 
 ```bash
 pip install --upgrade nextflow
