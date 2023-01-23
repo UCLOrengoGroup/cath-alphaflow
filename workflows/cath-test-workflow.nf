@@ -49,7 +49,7 @@ process retrieve_af_chain_cif_files {
     // see: https://www.nextflow.io/docs/latest/google.html
 
     """
-    cat ${af_model_urls_file} | (gsutil -m cp -I . || echo "Ignoring non-zero exit code: \$?")
+    cat ${af_model_urls_file} | (gsutil -o GSUtil:parallel_process_count=1 -m cp -I . || echo "Ignoring non-zero exit code: \$?")
     """
 }
 
