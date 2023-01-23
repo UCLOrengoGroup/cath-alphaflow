@@ -8,7 +8,7 @@ import click
 
 from cath_alphaflow.io_utils import get_af_domain_id_reader
 from cath_alphaflow.io_utils import get_csv_dictwriter
-from cath_alphaflow.models import AFDomainID, Segment, Chopping
+from cath_alphaflow.models.domains import AFDomainID, Segment, Chopping
 from cath_alphaflow.errors import NoMatchingResiduesError
 
 LOG = logging.getLogger()

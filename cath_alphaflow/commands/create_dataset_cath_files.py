@@ -6,7 +6,7 @@ from cath_alphaflow.io_utils import get_uniprot_id_dictreader
 from cath_alphaflow.io_utils import get_csv_dictwriter
 from cath_alphaflow.io_utils import chunked_iterable
 from cath_alphaflow.db_utils import OraDB
-from cath_alphaflow.models import Chopping, AFChainID, AFDomainID
+from cath_alphaflow.models.domains import Chopping, AFChainID, AFDomainID
 from cath_alphaflow.settings import DEFAULT_AF_VERSION, DEFAULT_AF_FRAGMENT
 
 

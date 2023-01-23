@@ -5,7 +5,7 @@ import click
 from cath_alphaflow.io_utils import (
     yield_first_col,
 )
-from cath_alphaflow.models import AFDomainID
+from cath_alphaflow.models.domains import AFDomainID
 from cath_alphaflow.constants import (
     DEFAULT_CIF_SUFFIX,
     ID_TYPE_AF_DOMAIN,

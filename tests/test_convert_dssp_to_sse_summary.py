@@ -3,7 +3,7 @@ from pathlib import Path
 import csv
 from click.testing import CliRunner
 from cath_alphaflow.cli import cli
-from cath_alphaflow.models import SecStrSummary
+from cath_alphaflow.models.domains import SecStrSummary
 
 
 UNIPROT_IDS = ["P00520"]

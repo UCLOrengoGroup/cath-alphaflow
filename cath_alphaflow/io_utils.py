@@ -2,8 +2,8 @@ import csv
 import logging
 import itertools
 
-from .models import AFChainID
-from .models import AFDomainID
+from .models.domains import AFChainID
+from .models.domains import AFDomainID
 
 LOG = logging.getLogger(__name__)
 

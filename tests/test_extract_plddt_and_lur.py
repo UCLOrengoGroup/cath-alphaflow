@@ -6,7 +6,7 @@ from cath_alphaflow.commands.extract_plddt_and_lur import (
     get_average_plddt_from_plddt_string,
     get_LUR_residues_percentage,
 )
-from cath_alphaflow.models import Chopping, LURSummary, Segment
+from cath_alphaflow.models.domains import Chopping, LURSummary, Segment
 
 
 UNIPROT_IDS = ["P00520"]
