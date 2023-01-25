@@ -9,7 +9,6 @@ params.cath_version = 'v4_3_0'
 params.publish_dir = "$workflow.launchDir/results-${params.dataset_name}"
 params.af_version = 4
 params.af_download_stem = "gs://public-datasets-deepmind-alphafold-v${params.af_version}"
-params.uniprot_ids_csv_fn = "${params.dataset_name}.uniprot_ids.csv"
 params.af_cif_raw_dir = "cif_raw"
 params.af_cif_chopped_dir = "cif_chopped"
 
@@ -81,10 +80,10 @@ process uniprot_domain_to_uniprot {
     path uniprot_domain_id
 
     output:
-    path params.uniprot_ids_csv_fn
+    path 'uniprot_ids.txt'
 
     """
-    cat ${uniprot_domain_id} | tr '/' ' ' | awk '{print \$1}' | sort | uniq  > ${params.uniprot_ids_csv_fn}
+    cat ${uniprot_domain_id} | tr '/' ' ' | awk '{print \$1}' | sort | uniq  > uniprot_ids.txt
     """
 }
 
