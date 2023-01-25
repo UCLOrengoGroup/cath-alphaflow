@@ -10,7 +10,6 @@ params.publish_dir = "$workflow.launchDir/results-${params.dataset_name}"
 params.af_version = 4
 params.af_download_stem = "gs://public-datasets-deepmind-alphafold-v${params.af_version}"
 params.uniprot_ids_csv_fn = "${params.dataset_name}.uniprot_ids.csv"
-params.af_manifest_fn = "af_manifest.txt"
 params.af_cif_raw_dir = "cif_raw"
 params.af_cif_chopped_dir = "cif_chopped"
 
@@ -19,10 +18,10 @@ process create_af_manifest_file {
     path uniprot_id_file
     
     output:
-    path params.af_manifest_fn
+    path 'manifest.txt'
 
     """
-    cat ${uniprot_id_file} | awk '{print "${params.af_download_stem}/AF-"\$1"-F*.cif"}' > ${params.af_manifest_fn}
+    cat ${uniprot_id_file} | awk '{print "${params.af_download_stem}/AF-"\$1"-F*.cif"}' > manifest.txt
     """
 }
 
