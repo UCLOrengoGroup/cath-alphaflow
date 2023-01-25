@@ -6,7 +6,7 @@ params.chunk_size = 10
 params.cath_af_cli = 'cath-af-cli'
 params.cath_version = 'v4_3_0'
 
-params.publish_dir = "$workflow.launchDir/cath-test-hpc-${params.dataset_name}"
+params.publish_dir = "$workflow.launchDir/results-${params.dataset_name}"
 params.af_version = 4
 params.af_download_stem = "gs://public-datasets-deepmind-alphafold-v${params.af_version}"
 params.uniprot_ids_csv_fn = "${params.dataset_name}.uniprot_ids.csv"
