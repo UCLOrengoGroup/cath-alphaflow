@@ -1,0 +1,19 @@
+#this file is common to install and source
+
+#path to create the venv
+export CATH_VENV_PATH=~/cath_venv
+
+#path to install gcloud
+export CATH_GCLOUD=~/gcloud
+export CATH_GCLOUD_USER='robert.vickerstaff.aws@gmail.com'
+export PATH=${CATH_GCLOUD}/google-cloud-sdk/bin:${PATH}
+
+#path to clone the repo to
+export REPOS_PATH=~/repos
+export REPO_NAME=cath-alphaflow
+export CATH_REPO_PATH=${REPOS_PATH}/${REPO_NAME}
+
+#path to store bulk data outside the repo path if required
+#eg if repo is on home and bulk storage is a project folder somewhere else?
+export CATH_DATA_PATH=~/cath-workspace-test
+
