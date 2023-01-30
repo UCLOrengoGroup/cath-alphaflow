@@ -1,20 +1,26 @@
 #!/usr/bin/env bash
 
-#initial install of everything using pip, wget and git clone
-#also currently runs cath-af pytest and nextflow hello example
+# one-off install steps required to setup cath-alphaflow on my local linux vm
+# assumes pip is available as an install method, doesn't require sudo
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 source ${SCRIPT_DIR}/include
 
-#get cath-af repo - you'll probably want to run these steps manually in order to get this script
+#get cath-af repo
 mkdir -p ${REPOS_PATH}
 cd ${REPOS_PATH}
 git clone https://github.com/UCLOrengoGroup/cath-alphaflow.git
+#NB to be able topush changes back to the repo:
+#  git remote set-url origin git@github.com:UCLOrengoGroup/cath-alphaflow.git
+
+#install venv
+pip install --user --upgrade virtualenv
 
 #venv setup, install dependencies
 python3 -m venv ${CATH_VENV_PATH}
 . ${CATH_VENV_PATH}/bin/activate
-pip install --upgrade pip wheel pytest nextflow
+pip install --upgrade pip wheel pytest nextflow install-jdk
+python -c 'import jdk; jdk.install("11", jre=True)'
 
 #get gcloud utils
 mkdir -p ${CATH_GCLOUD}
@@ -22,6 +28,7 @@ cd ${CATH_GCLOUD}
 wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-415.0.0-linux-x86_64.tar.gz
 tar -xf google-cloud-cli-415.0.0-linux-x86_64.tar.gz
 
+#install and test cath-af
 cd ${REPO_NAME}
 pip install -e .
 pytest
@@ -29,3 +36,4 @@ pytest
 #test nextflow
 cd ~
 nextflow run hello
+
