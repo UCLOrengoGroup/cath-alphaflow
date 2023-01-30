@@ -8,7 +8,10 @@ source ${SCRIPT_DIR}/include
 . ${CATH_VENV_PATH}/bin/activate
 
 #login to gcloud, generates interactive prompt and tries to launch browser
-gcloud auth login ${CATH_GLOUD_USER}
+gcloud auth login ${CATH_GCLOUD_USER}
+
+#or should it be:
+#  gcloud auth application-default login ?
 
 #NB to revoke permissions:
 #  gcloud auth revoke ${CATH_GLOUD_USER}
