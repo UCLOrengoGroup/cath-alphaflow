@@ -10,6 +10,8 @@ source ${SCRIPT_DIR}/include
 mkdir -p ${REPOS_PATH}
 cd ${REPOS_PATH}
 git clone https://github.com/UCLOrengoGroup/cath-alphaflow.git
+#NB to be able topush changes back to the repo:
+#  git remote set-url origin git@github.com:UCLOrengoGroup/cath-alphaflow.git
 
 #install venv
 pip install --user --upgrade virtualenv
