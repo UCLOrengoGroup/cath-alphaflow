@@ -6,6 +6,11 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 source ${SCRIPT_DIR}/include
 
+#get cath-af repo - you'll probably want to run these steps manually in order to get this script
+mkdir -p ${REPOS_PATH}
+cd ${REPOS_PATH}
+git clone https://github.com/UCLOrengoGroup/cath-alphaflow.git
+
 #venv setup, install dependencies
 python3 -m venv ${CATH_VENV_PATH}
 . ${CATH_VENV_PATH}/bin/activate
@@ -17,10 +22,6 @@ cd ${CATH_GCLOUD}
 wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-415.0.0-linux-x86_64.tar.gz
 tar -xf google-cloud-cli-415.0.0-linux-x86_64.tar.gz
 
-#get cath-af repo
-mkdir -p ${REPOS_PATH}
-cd ${REPOS_PATH}
-git clone https://github.com/UCLOrengoGroup/cath-alphaflow.git
 cd ${REPO_NAME}
 pip install -e .
 pytest
@@ -28,8 +29,3 @@ pytest
 #test nextflow
 cd ~
 nextflow run hello
-
-##move into data processing folder
-#mkdir -p ${CATH_DATA_PATH}
-#cd ${CATH_DATA_PATH}
-#nextflow run ${CATH_REPO_PATH}/workflows/cath-test-workflow.nf

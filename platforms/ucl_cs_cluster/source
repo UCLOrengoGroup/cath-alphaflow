@@ -10,3 +10,8 @@ source ${SCRIPT_DIR}/include
 
 #login to gcloud, generates interactive prompt
 gcloud auth login ${CATH_GLOUD_USER}
+
+#NB to revoke permissions:
+#  gcloud auth revoke ${CATH_GLOUD_USER}
+# or
+#  gcloud auth revoke --all

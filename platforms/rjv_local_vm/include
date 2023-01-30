@@ -17,3 +17,5 @@ export CATH_REPO_PATH=${REPOS_PATH}/${REPO_NAME}
 #eg if repo is on home and bulk storage is a project folder somewhere else?
 export CATH_DATA_PATH=~/cath-workspace-test
 
+export CATH_JAVA_PATH=~/.jre/jdk-11.0.18+10-jre/bin
+export PATH=${CATH_JAVA_PATH}:${PATH}

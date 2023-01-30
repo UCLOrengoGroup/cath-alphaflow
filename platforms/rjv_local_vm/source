@@ -6,7 +6,11 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 source ${SCRIPT_DIR}/include
 . ${CATH_VENV_PATH}/bin/activate
-mamba activate
 
 #login to gcloud, generates interactive prompt and tries to launch browser
 gcloud auth login ${CATH_GLOUD_USER}
+
+#NB to revoke permissions:
+#  gcloud auth revoke ${CATH_GLOUD_USER}
+# or
+#  gcloud auth revoke --all

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# one-off install steps required to run cath-af on my linux vm
-# assumes pip and mamba are available as install methods
+# one-off install steps required to setup cath-alphaflow on my local linux vm
+# assumes pip is available as an install method, doesn't require sudo
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 source ${SCRIPT_DIR}/include
@@ -11,12 +11,14 @@ mkdir -p ${REPOS_PATH}
 cd ${REPOS_PATH}
 git clone https://github.com/UCLOrengoGroup/cath-alphaflow.git
 
+#install venv
+pip install --user --upgrade virtualenv
+
 #venv setup, install dependencies
 python3 -m venv ${CATH_VENV_PATH}
 . ${CATH_VENV_PATH}/bin/activate
-pip install --upgrade pip wheel pytest nextflow virtualenv
-mamba install openjdk
-mamba activate
+pip install --upgrade pip wheel pytest nextflow install-jdk
+python -c 'import jdk; jdk.install("11", jre=True)'
 
 #get gcloud utils
 mkdir -p ${CATH_GCLOUD}
