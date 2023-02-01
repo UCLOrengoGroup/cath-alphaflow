@@ -106,3 +106,20 @@ Succeeded : 48
 Cached : 151
 
 ```
+
+## Configuring for your execution environment
+
+The platform folder contains subfolders for each execution environment the pipeline has been tested with so far. You can create a new subfolder and copy and customise the files found in one of the existing subfolders. Each subfolder contains:
+
+- an `include` file which sets environment variables
+- an `install` script which performs one-off package and dependency installation
+- a `source` script which should to sourced immediately prior to launching the pipeline
+- a `nextflow.config` file containing overrides to the base nextflow.config
+
+To run nextflow using a custom configuration use the following from the toplevel folder of the repository, ie the folder containing the base nextflow.config, such that it will be automatically picked up but selectively overridden by the explicitly specified platform specific config:
+
+```
+nextflow run -resume -c ./platforms/<your_platform>/nextflow.config ./workflows/cath-test-workflow.nf
+```
+
+You would typically run this from an HPC login node.

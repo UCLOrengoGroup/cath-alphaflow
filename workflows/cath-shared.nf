@@ -13,7 +13,7 @@ params.af_cif_raw_dir = "cif_raw"
 params.af_cif_chopped_dir = "cif_chopped"
 
 process create_af_manifest_file {
-    label 'default_local'
+    label 'small_job'
 
     input:
     path uniprot_id_file
@@ -27,7 +27,7 @@ process create_af_manifest_file {
 }
 
 process retrieve_af_chain_cif_files {
-    label 'default_local'
+    label 'small_job'
     publishDir "${params.publish_dir}/${params.af_cif_raw_dir}", mode: 'copy'
 
     input:
@@ -48,7 +48,7 @@ process retrieve_af_chain_cif_files {
 }
 
 process chop_cif {
-    label 'default_sge'
+    label 'small_job'
     publishDir params.publish_dir, mode: 'copy'
 
     input:
@@ -80,7 +80,7 @@ process chop_cif {
 }
 
 process uniprot_domain_to_uniprot {
-    label 'default_local'
+    label 'small_job'
     input:
     path uniprot_domain_id
 
@@ -93,7 +93,7 @@ process uniprot_domain_to_uniprot {
 }
 
 process cif_paths_to_uniprot_accessions {
-    label 'default_local'
+    label 'small_job'
     input: 
     path 'cif_paths.txt'
 
@@ -106,7 +106,7 @@ process cif_paths_to_uniprot_accessions {
 }
 
 process create_missing_uniprot_domain_ids {
-    label 'default_local'
+    label 'local_job'
     input:
     path 'found_uniprot_ids.txt'
     path 'all_uniprot_domain_ids.txt'
