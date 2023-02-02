@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+# Myriad version / Rachel version
+
+#initial install of everything using pip, wget and git clone
+#also currently runs cath-af pytest and nextflow hello example
+
+#SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR=~/repos/cath-alphaflow/platforms/ucl_myriad
+source ${SCRIPT_DIR}/include
+
+#get cath-af repo - you'll probably want to run these steps manually in order to get this script
+mkdir -p ${REPOS_PATH}
+cd ${REPOS_PATH}
+git clone https://github.com/UCLOrengoGroup/cath-alphaflow.git
+
+#venv setup, install dependencies
+python3 -m venv ${CATH_VENV_PATH}
+. ${CATH_VENV_PATH}/bin/activate
+pip install --upgrade pip wheel pytest nextflow
+
+#get gcloud utils
+mkdir -p ${CATH_GCLOUD}
+cd ${CATH_GCLOUD}
+wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-415.0.0-linux-x86_64.tar.gz
+tar -xf google-cloud-cli-415.0.0-linux-x86_64.tar.gz
+
+cd ${REPO_NAME}
+pip install -e .
+pytest
+
+#test nextflow
+cd ~
+nextflow run hello

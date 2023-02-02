@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#script to setup environment ready to use each time
+#only tested interactively in a qrsh session so far
+#uasge example: [rvickers@pchuckle cath-alphaflow]$ source ./platforms/ucl_cs_cluster/source
+
+#SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR=~/repos/cath-alphaflow/platforms/ucl_myriad
+source ${SCRIPT_DIR}/include
+. ${CATH_VENV_PATH}/bin/activate
+
+#login to gcloud, generates interactive prompt
+gcloud auth login ${CATH_GCLOUD_USER}
+
+#or should it be:
+#  gcloud auth application-default login ?
+
+#NB to revoke permissions:
+#  gcloud auth revoke ${CATH_GLOUD_USER}
+# or
+#  gcloud auth revoke --all
