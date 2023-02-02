@@ -1,11 +1,13 @@
 # Install cath-alphaflow on MYRIAD
 
-### Version that is already in the repo
+### Installing a version, first cloning the repo
 ```
 cd ~
 mkdir repos
 cd repos
 git clone https://github.com/UCLOrengoGroup/cath-alphaflow.git
+chmod +x ~/repos/cath-alphaflow/platforms/ucl_myriad/install_no_repo
+~/repos/cath-alphaflow/platforms/ucl_myriad/install_no_repo
 ```
 
 
