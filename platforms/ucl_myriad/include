@@ -18,10 +18,6 @@ export CATH_REPO_PATH=${REPOS_PATH}/${REPO_NAME}
 #eg if repo is on home and bulk storage is a project folder somewhere else?
 export CATH_DATA_PATH=~/cath-workspace-test
 
-#load java and python modules
-module load python3
-module load java/openjdk-11/11.0.1
-
 #put cloud sdk in the path
 export PATH=${CATH_GCLOUD}/google-cloud-sdk/bin:${PATH}
 

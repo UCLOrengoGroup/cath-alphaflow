@@ -6,8 +6,19 @@ cd ~
 mkdir repos
 cd repos
 git clone https://github.com/UCLOrengoGroup/cath-alphaflow.git
+
+chmod +x ~/repos/cath-alphaflow/platforms/ucl_myriad/source
+~/repos/cath-alphaflow/platforms/ucl_myriad/source
+
 chmod +x ~/repos/cath-alphaflow/platforms/ucl_myriad/install_no_repo
 ~/repos/cath-alphaflow/platforms/ucl_myriad/install_no_repo
+
+chmod +x ~/repos/cath-alphaflow/platforms/ucl_myriad/environment
+~/repos/cath-alphaflow/platforms/ucl_myriad/environment
+
+# Test
+cd ~/repos/cath-alphaflow
+./nextflow run hello
 ```
 
 
@@ -16,18 +27,18 @@ chmod +x ~/repos/cath-alphaflow/platforms/ucl_myriad/install_no_repo
 ### Locally
 This can help you test that the provisioning and set up is working
 ```
-cd ~
+cd ~/repos/cath-alphaflow
 ./nextflow run -resume workflows/cath-test-workflow.nf
 ```
 ### From a login node
 This can help you test that the log in nodes are picking up the provisioning
 ```
-cd ~
+cd ~/repos/cath-alphaflow
  ./nextflow run workflows/cath-test-workflow.nf -c platforms/ucl_myriad/nextflow.config
 ```
 ### From a cluster node
 Preferred ordinary use as a login node is not tied up interactively
 ```
-cd ~
+cd ~/repos/cath-alphaflow
 platforms/ucl_myriad/next_nodes.sh
 ```

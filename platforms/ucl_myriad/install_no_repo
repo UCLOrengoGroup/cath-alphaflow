@@ -19,10 +19,11 @@ mkdir -p ${CATH_GCLOUD}
 cd ${CATH_GCLOUD}
 wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-415.0.0-linux-x86_64.tar.gz
 tar -xf google-cloud-cli-415.0.0-linux-x86_64.tar.gz
+export PATH=${CATH_GCLOUD}/google-cloud-sdk/bin:${PATH}
 
 cd ${REPO_NAME}
 pip install -e .
 pytest
-
+cath-af-cli
 # RUN NEXTFLOW
 curl -s https://get.nextflow.io | bash
