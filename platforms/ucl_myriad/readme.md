@@ -7,14 +7,11 @@ mkdir repos
 cd repos
 git clone https://github.com/UCLOrengoGroup/cath-alphaflow.git
 
-chmod +x ~/repos/cath-alphaflow/platforms/ucl_myriad/source
-~/repos/cath-alphaflow/platforms/ucl_myriad/source
+chmod +x ~/repos/cath-alphaflow/platforms/ucl_myriad/pre.sh
+~/repos/cath-alphaflow/platforms/ucl_myriad/pre.sh
 
 chmod +x ~/repos/cath-alphaflow/platforms/ucl_myriad/install_no_repo
 ~/repos/cath-alphaflow/platforms/ucl_myriad/install_no_repo
-
-chmod +x ~/repos/cath-alphaflow/platforms/ucl_myriad/environment
-~/repos/cath-alphaflow/platforms/ucl_myriad/environment
 
 # Test
 cd ~/repos/cath-alphaflow
