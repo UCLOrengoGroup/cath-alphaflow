@@ -29,16 +29,25 @@ This can help you test that the provisioning and set up is working
 ```
 cd ~/repos/cath-alphaflow
 ./nextflow run -resume workflows/cath-test-workflow.nf
+# or
+./nextflow run workflows/cath-test-workflow.nf
 ```
 ### From a login node
 This can help you test that the log in nodes are picking up the provisioning
 ```
 cd ~/repos/cath-alphaflow
+ # with or without resume
  ./nextflow run workflows/cath-test-workflow.nf -c platforms/ucl_myriad/nextflow.config
+ ./nextflow run -resume workflows/cath-test-workflow.nf -c platforms/ucl_myriad/nextflow.config
+
 ```
 ### From a cluster node
 Preferred ordinary use as a login node is not tied up interactively
 ```
 cd ~/repos/cath-alphaflow
 platforms/ucl_myriad/next_nodes.sh
+```
+### Watch your qstat
+```
+watch --interval=0.5 qstat
 ```
