@@ -1,7 +1,8 @@
 
-# These are the steps to kick off nf interactively from log in
+# Interactive kick off for cath-aplhaflow
 
-# PATH INCLUDES and END VARIABLES
+## PATH INCLUDES and END VARIABLES
+```
 cd ~
 #path to create the venv
 export CATH_VENV_PATH=~/cath_venv
@@ -19,10 +20,11 @@ export CATH_DATA_PATH=~/cath-workspace-test
 module load python3
 module load java/openjdk-11/11.0.1
 export PATH=${CATH_GCLOUD}/google-cloud-sdk/bin:${PATH}
+```
 
-# INSTALLATIONS AND CLONES
-#initial install of everything using pip, wget and git clone
-
+## INSTALLATIONS AND CLONES
+Initial install of everything using pip, wget and git clone
+```
 #venv setup, install dependencies
 python3 -m venv ${CATH_VENV_PATH}
 . ${CATH_VENV_PATH}/bin/activate
@@ -39,19 +41,28 @@ git clone https://github.com/UCLOrengoGroup/cath-alphaflow.git
 cd ${REPO_NAME}
 pip install -e .
 cath-af-cli
+```
 
-# RUN NEXTFLOW
-curl -s https://get.nextflow.io | bash
+## Install NEXTFLOW
+```
 cd ${CATH_REPO_PATH}
-
+curl -s https://get.nextflow.io | bash
+```
 # run locally on myriad
+```
+cd ${CATH_REPO_PATH}
  ./nextflow run -resume workflows/cath-test-workflow.nf
-
+```
  # or on the nodes
+ ```
+ cd ${CATH_REPO_PATH}
  ./nextflow run workflows/cath-test-workflow.nf -c platforms/ucl_myriad/nextflow.config
-
+```
  # or on the nodes from a node
+ ```
+ cd ${CATH_REPO_PATH}
  platforms/ucl_myriad/next_nodes.sh
 
+```
 
 

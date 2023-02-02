@@ -45,7 +45,7 @@ cd ~/repos/cath-alphaflow
 Preferred ordinary use as a login node is not tied up interactively
 ```
 cd ~/repos/cath-alphaflow
-platforms/ucl_myriad/next_nodes.sh
+qsub platforms/ucl_myriad/next_nodes.sh
 ```
 
 ### Monitoring the queues
@@ -58,5 +58,10 @@ watch --interval=0.5 qstat
 Nextflow writes to the parent processes cerr and cout so the jobs do not write log files.
 Where you run from login node you will see outputs on the command line.
 Where you run from a myriad node there will be only one log file in Scratch/workspace for all processes.
+
+#### watch the log file from qsub
+```
+tail -f cath_ctrl.o2268942
+```
 
 
