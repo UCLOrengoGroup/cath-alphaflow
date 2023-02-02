@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #script to setup environment ready to use each time
 #only tested interactively in a qrsh session so far
