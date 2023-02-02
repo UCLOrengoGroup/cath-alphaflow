@@ -12,6 +12,7 @@ source ${SCRIPT_DIR}/include
 #login to gcloud, generates interactive prompt
 gcloud auth login ${CATH_GCLOUD_USER}
 
+source ~/.bashrc
 module load python3
 module load java/openjdk-11/11.0.1
 
