@@ -24,10 +24,5 @@ cd ${REPO_NAME}
 pip install -e .
 pytest
 
-#load java and python modules
-module load python3
-module load java/openjdk-11/11.0.1
-
-#test nextflow
-cd ~
-nextflow run hello
+# RUN NEXTFLOW
+curl -s https://get.nextflow.io | bash
