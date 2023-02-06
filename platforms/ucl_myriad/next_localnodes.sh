@@ -9,4 +9,5 @@ source ~/.bashrc
 module load python3
 module load java/openjdk-11/11.0.1
 
+cd ${CATH_REPO_PATH}
 ./nextflow run workflows/cath-test-workflow.nf -c platforms/ucl_myriad/nextflow.config

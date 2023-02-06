@@ -53,6 +53,7 @@ Where you run from a myriad node there will be only one log file in Scratch/work
 
 #### watch the log file from qsub
 ```
+cd ~/Scratch/workspace
 tail -f cath_ctrl.o2268942
 ```
 
