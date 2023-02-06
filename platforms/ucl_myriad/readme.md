@@ -7,11 +7,8 @@ mkdir repos
 cd repos
 git clone https://github.com/UCLOrengoGroup/cath-alphaflow.git
 
-chmod +x ~/repos/cath-alphaflow/platforms/ucl_myriad/pre.sh
-~/repos/cath-alphaflow/platforms/ucl_myriad/pre.sh
-
-chmod +x ~/repos/cath-alphaflow/platforms/ucl_myriad/install_no_repo
-~/repos/cath-alphaflow/platforms/ucl_myriad/install_no_repo
+chmod +x ~/repos/cath-alphaflow/platforms/ucl_myriad/install
+~/repos/cath-alphaflow/platforms/ucl_myriad/install
 
 # Test
 cd ~/repos/cath-alphaflow
@@ -35,8 +32,9 @@ cd ~/repos/cath-alphaflow
 chmod +x ~/repos/cath-alphaflow/platforms/ucl_myriad/next_localnodes.sh
 ~/repos/cath-alphaflow/platforms/ucl_myriad/next_localnodes.sh
 ```
-### From a cluster node
-Preferred ordinary use as a login node is not tied up interactively
+### From a cluster node 
+Login node is not tied up interactively
+(N.b. not currently in use, only in test)
 ```
 cd ~/repos/cath-alphaflow
 qsub platforms/ucl_myriad/next_nodes.sh

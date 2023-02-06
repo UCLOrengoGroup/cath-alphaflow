@@ -9,11 +9,6 @@
 SCRIPT_DIR=~/repos/cath-alphaflow/platforms/ucl_myriad
 source ${SCRIPT_DIR}/include
 
-#get cath-af repo - you'll probably want to run these steps manually in order to get this script
-mkdir -p ${REPOS_PATH}
-cd ${REPOS_PATH}
-git clone https://github.com/UCLOrengoGroup/cath-alphaflow.git
-
 #venv setup, install dependencies
 python3 -m venv ${CATH_VENV_PATH}
 . ${CATH_VENV_PATH}/bin/activate
@@ -24,8 +19,17 @@ mkdir -p ${CATH_GCLOUD}
 cd ${CATH_GCLOUD}
 wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-415.0.0-linux-x86_64.tar.gz
 tar -xf google-cloud-cli-415.0.0-linux-x86_64.tar.gz
+export PATH=${CATH_GCLOUD}/google-cloud-sdk/bin:${PATH}
+#login to gcloud, generates interactive prompt
+gcloud auth login ${CATH_GCLOUD_USER}
 
 cd ${REPO_NAME}
 pip install -e .
 pytest
+cath-af-cli
+# RUN NEXTFLOW
+curl -s https://get.nextflow.io | bash
 
+source ~/.bashrc
+module load python3
+module load java/openjdk-11/11.0.1
