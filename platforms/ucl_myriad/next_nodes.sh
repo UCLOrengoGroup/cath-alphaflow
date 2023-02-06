@@ -26,19 +26,14 @@ export CATH_VENV_PATH=~/cath_venv
 export CATH_GCLOUD=~/gcloud
 export CATH_GCLOUD_USER='rachelalcraft@gmail.com'
 #path to clone the repo to
-export REPOS_PATH=~/repos
-export REPO_NAME=cath-alphaflow
-export CATH_REPO_PATH=${REPOS_PATH}/${REPO_NAME}
-#path to store bulk data outside the repo path if required
-#eg if repo is on home and bulk storage is a project folder somewhere else?
-export CATH_DATA_PATH=~/cath-workspace-test
-#put python, java and google cloud sdk in the path
+SCRIPT_DIR=~/repos/cath-alphaflow/platforms/ucl_myriad
+source ${SCRIPT_DIR}/include
+. ${CATH_VENV_PATH}/bin/activate
+
+gcloud auth login ${CATH_GCLOUD_USER}
+
+source ~/.bashrc
 module load python3
 module load java/openjdk-11/11.0.1
-export PATH=${CATH_GCLOUD}/google-cloud-sdk/bin:${PATH}
-. ${CATH_VENV_PATH}/bin/activate
-pip install -e .
-cath-af-cli
-cd ${CATH_REPO_PATH}
 
  ./nextflow run workflows/cath-test-workflow.nf -c platforms/ucl_myriad/nextflow.config
