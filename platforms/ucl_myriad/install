@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash -l
 
 # Myriad version / Rachel version
 
@@ -9,6 +9,7 @@ SCRIPT_DIR=~/repos/cath-alphaflow/platforms/ucl_myriad
 source ${SCRIPT_DIR}/include
 
 #venv setup, install dependencies
+source ~/.bashrc
 module load python3
 python3 -m venv ${CATH_VENV_PATH}
 . ${CATH_VENV_PATH}/bin/activate
@@ -27,7 +28,7 @@ export PATH=${CATH_GCLOUD}/google-cloud-sdk/bin:${PATH}
 #login to gcloud, generates interactive prompt
 gcloud auth login ${CATH_GCLOUD_USER}
 
-cd ${REPO_NAME}
+cd ${CATH_REPO_PATH}
 pip install -e .
 pytest
 cath-af-cli
