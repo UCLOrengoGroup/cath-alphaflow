@@ -123,3 +123,25 @@ nextflow run -resume -c ./platforms/<your_platform>/nextflow.config ./workflows/
 ```
 
 You would typically run this from an HPC login node.
+
+---
+
+## Tracing and visualising timelines of the pipeline
+https://www.nextflow.io/docs/latest/tracing.html
+
+The production of a pipeline image needs the installation of graphviz
+```
+sudo apt install graphviz
+```
+Call nextflow with -with-dag, e.g.
+```
+./nextflow run workflows/cath-test-workflow.nf -with-dag cath-test-workflow.png
+```
+An html report that shows the process timings, gantt chart style
+```
+./nextflow run workflows/cath-test-workflow.nf -with-timeline cath-test-workflow-gantt.html
+```
+An html html report with plotly summaries of processes: 
+```
+./nextflow run workflows/cath-test-workflow.nf -with-report cath-test-workflow-plots.html
+```
