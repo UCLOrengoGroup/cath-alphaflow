@@ -6,7 +6,8 @@ import hashlib
 
 from Bio import SeqIO
 
-from cath_alphaflow.io_utils import yield_first_col, get_csv_dictwriter
+from cath_alphaflow.io_utils import yield_first_col, get_uniprot_md5_summary_writer
+from cath_alphaflow.seq_utils import str_to_md5
 from cath_alphaflow.models import AFDomainID
 from cath_alphaflow.constants import (
     ID_TYPE_AF_DOMAIN,
@@ -54,17 +55,13 @@ LOG = logging.getLogger()
 )
 def create_md5(id_file, fasta_file, id_type, uniprot_md5_csv_file, chunk_size):
     "Calculate MD5 for FASTA sequences"
-
-    csv_fieldnames = ["uniprot_acc", "sequence_md5"]
-    with open(uniprot_md5_csv_file, mode="wt") as out_fp:
-        csv_writer = get_csv_dictwriter(out_fp, fieldnames=csv_fieldnames)
-        csv_writer.writeheader()
+    with uniprot_md5_csv_file as out_fp:
+        md5_out_writer = get_uniprot_md5_summary_writer(out_fp)
 
         # chunk uniprot ids (in case we have many millions)
         for uniprot_ids in yield_first_col_chunked(
             id_file, id_type, chunk_size=chunk_size
         ):
-
             # work through fasta file, calculate output for relevant records
             with open(fasta_file, "rt") as fasta_fp:
                 for record in SeqIO.parse(fasta_fp, "fasta"):
@@ -78,20 +75,14 @@ def create_md5(id_file, fasta_file, id_type, uniprot_md5_csv_file, chunk_size):
 
                     row_data = {
                         "uniprot_acc": uniprot_acc,
-                        "sequence_md5": str_to_md5(record.seq),
+                        "sequence_md5": str_to_md5(str(record.seq)),
                     }
-                    csv_writer.write(row_data)
+                    md5_out_writer.writerow(row_data)
 
     click.echo("DONE")
 
 
-def str_to_md5(in_str):
-    md5 = hashlib.md5(in_str.encode("utf-8")).hexdigest()
-    return md5
-
-
 def yield_first_col_chunked(id_file, id_type, chunk_size):
-
     uniprot_ids = set()
     for id_str in yield_first_col(id_file):
         uniprot_id = None
@@ -101,7 +92,6 @@ def yield_first_col_chunked(id_file, id_type, chunk_size):
             uniprot_id = id_str
         else:
             raise click.UsageError(f"failed to recognise id_type={id_type}")
-
         uniprot_ids.add(uniprot_id)
         if len(uniprot_ids) % chunk_size == 0:
             yield uniprot_ids
