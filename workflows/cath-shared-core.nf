@@ -118,3 +118,4 @@ process create_missing_uniprot_domain_ids {
     grep -F -v -f found_uniprot_ids.txt all_uniprot_domain_ids.txt > missing_uniprot_domain_ids.txt
     """
 }
+
