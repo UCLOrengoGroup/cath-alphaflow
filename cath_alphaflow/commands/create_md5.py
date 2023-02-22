@@ -1,8 +1,5 @@
 import logging
-from pathlib import Path
 import click
-import csv
-import hashlib
 
 from Bio import SeqIO
 
@@ -25,12 +22,12 @@ LOG = logging.getLogger()
     "--id_file",
     type=click.File("rt"),
     required=True,
-    help="Input: CSV file containing list of ids to convert from CIF to DSSP",
+    help="Input: CSV file containing list of ids to convert from FASTA to md5",
 )
 @click.option(
     "--fasta",
     "fasta_file",
-    type=click.Path(exists=True, file_okay=True, dir_okay=False),
+    type=click.File("rt"),
     required=True,
     help=f"Input: the fasta database containing all AF sequences",
 )
@@ -55,16 +52,16 @@ LOG = logging.getLogger()
 )
 def create_md5(id_file, fasta_file, id_type, uniprot_md5_csv_file, chunk_size):
     "Calculate MD5 for FASTA sequences"
-    with uniprot_md5_csv_file as out_fp:
-        md5_out_writer = get_uniprot_md5_summary_writer(out_fp)
+    with uniprot_md5_csv_file as out_fh:
+        md5_out_writer = get_uniprot_md5_summary_writer(out_fh)
 
         # chunk uniprot ids (in case we have many millions)
         for uniprot_ids in yield_first_col_chunked(
             id_file, id_type, chunk_size=chunk_size
         ):
             # work through fasta file, calculate output for relevant records
-            with open(fasta_file, "rt") as fasta_fp:
-                for record in SeqIO.parse(fasta_fp, "fasta"):
+            with fasta_file as fasta_fh:
+                for record in SeqIO.parse(fasta_fh, "fasta"):
                     click.echo(f"record: {record.id} seq='{record.seq[:10]}...'")
 
                     _db, uniprot_acc, _name = record.id.split("|")
@@ -74,7 +71,7 @@ def create_md5(id_file, fasta_file, id_type, uniprot_md5_csv_file, chunk_size):
                         continue
 
                     row_data = {
-                        "uniprot_acc": uniprot_acc,
+                        "uniprot_id": uniprot_acc,
                         "sequence_md5": str_to_md5(str(record.seq)),
                     }
                     md5_out_writer.writerow(row_data)
