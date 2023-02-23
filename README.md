@@ -24,6 +24,8 @@ superfamilies (i.e. domains that are related by evolution).
 **dssp** - [dssp](https://github.com/PDB-REDO/dssp) applies secondary structure to protein sequence. 
 Needs first installed: [libmcfp](https://github.com/mhekkel/libmcfp)
 
+**oracle** - Some datasources come optionally from an oracle database, for which there is access only within UCL. Instructions for UCL access to the database are [here](README.oracle.md)
+
 ## Project
 
 The NextFlow workflows are kept here:
