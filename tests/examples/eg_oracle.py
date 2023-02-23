@@ -8,9 +8,9 @@ use_new_lib = True
 
 ORACLE_DB_HOST="localhost"
 ORACLE_DB_PORT=1521
-ORACLE_DB_SID="ask someone in UCL"
-ORACLE_DB_USERNAME="ask someone in UCL"
-ORACLE_DB_PASSWORD="ask someone in UCL"
+ORACLE_DB_SID="cathora1"
+ORACLE_DB_USERNAME="orengoreader"
+ORACLE_DB_PASSWORD="orengoreader"
 
 dsn=(
             f"(DESCRIPTION="
@@ -25,7 +25,7 @@ if use_new_lib:
 else:
   import cx_Oracle as db
   
-conn = oracledb.connect(user=ORACLE_DB_USERNAME, password=ORACLE_DB_PASSWORD, dsn=dsn)
+conn = db.connect(user=ORACLE_DB_USERNAME, password=ORACLE_DB_PASSWORD, dsn=dsn)
 print("Connected with oracle to",ORACLE_DB_USERNAME, ORACLE_DB_PASSWORD, ORACLE_DB_HOST, ORACLE_DB_PORT, ORACLE_DB_SID)
 conn.close()
 
