@@ -21,6 +21,9 @@ superfamilies (i.e. domains that are related by evolution).
 
 **NextFlow** - [NextFlow](https://www.nextflow.io/) enables scalable and reproducible scientific workflows using software containers. It allows the adaptation of pipelines written in the most common scripting languages.
 
+**dssp** - [dssp](https://github.com/PDB-REDO/dssp) applies secondary structure to protein sequence. 
+Needs first installed: [libmcfp](https://github.com/mhekkel/libmcfp)
+
 ## Project
 
 The NextFlow workflows are kept here:
