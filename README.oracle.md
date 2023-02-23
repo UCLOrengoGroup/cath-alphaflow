@@ -38,9 +38,9 @@ The file is in gitignore so you can safely add your settings locally.
 add this to your local .ssh/config file (replace someone with your cs cluster username)
 
 ```
-Host tails
+Host gatename
   User someone
-  HostName tails.cs.ucl.ac.uk
+  HostName gatename.xx.xxx.ac.uk
 ```
 
 set up a local ssh key if you don't already have one, and then copy it to tails
@@ -58,7 +58,7 @@ $ ssh tails
 
 now try this
 ```
-$ ssh -L 1521:odb.cs.ucl.ac.uk:1521 tails
+$ ssh -L 1521:dbname.xx.xx.ac.uk:1521 tails
 ```
 this should open a normal looking ssh session to tails server, but also sets up the tunnel to the db in the back ground
 (to close the tunnel exit the ssh tails session)
@@ -68,7 +68,7 @@ while the special tails session is open you should be able to talk to the oracle
 once that's all working, for convenience you can create an alias in your local .bashrc by adding this line somewhere
 to avoid typing the long ssh command each time:
 ```
-alias ssh-odb='ssh -N -L 1521:odb.cs.ucl.ac.uk:1521 tails'
+alias ssh-odb='ssh -N -L 1521:dbname.xx.xx.ac.uk:1521 tails'
 ```
 the -N tells ssh not to open the interactive session to tails, but it still sets up the tunnel itself
 now just use:
