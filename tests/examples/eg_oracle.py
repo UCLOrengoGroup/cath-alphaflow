@@ -8,9 +8,9 @@ use_new_lib = True
 
 ORACLE_DB_HOST="localhost"
 ORACLE_DB_PORT=1521
-ORACLE_DB_SID="cathora1"
-ORACLE_DB_USERNAME="orengoreader"
-ORACLE_DB_PASSWORD="orengoreader"
+ORACLE_DB_SID="ask someone at UCL"
+ORACLE_DB_USERNAME="ask someone at UCL"
+ORACLE_DB_PASSWORD="ask someone at UCL"
 
 dsn=(
             f"(DESCRIPTION="
