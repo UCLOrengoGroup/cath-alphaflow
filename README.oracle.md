@@ -35,6 +35,8 @@ The file is in gitignore so you can safely add your settings locally.
 
 #### Set up a tunnel so that you can access from wherever you are
 
+(the variables are dbname and gatename along with the server path)
+
 add this to your local .ssh/config file (replace someone with your cs cluster username)
 
 ```
@@ -43,37 +45,37 @@ Host gatename
   HostName gatename.xx.xxx.ac.uk
 ```
 
-set up a local ssh key if you don't already have one, and then copy it to tails
+set up a local ssh key if you don't already have one, and then copy it to gatename
 ```
 $ ssh-keygen
-$ ssh-copy-id tails
+$ ssh-copy-id gatename
 <enter your cs cluster password>
 ```
 
-you should now be able to log into tails without entering a password (the first time you may need to enter the passphrase for you sshkey if you created one)
+you should now be able to log into gatename without entering a password (the first time you may need to enter the passphrase for you sshkey if you created one)
 ```
-$ ssh tails
+$ ssh gatename
 (then exit again)
 ```
 
 now try this
 ```
-$ ssh -L 1521:dbname.xx.xx.ac.uk:1521 tails
+$ ssh -L 1521:dbname.xx.xx.ac.uk:1521 gatename
 ```
-this should open a normal looking ssh session to tails server, but also sets up the tunnel to the db in the back ground
-(to close the tunnel exit the ssh tails session)
-while the special tails session is open you should be able to talk to the oracle db on localhost port 1521
+this should open a normal looking ssh session to gatename server, but also sets up the tunnel to the db in the back ground
+(to close the tunnel exit the ssh gatename session)
+while the special gatename session is open you should be able to talk to the oracle db on localhost port 1521
 
 
 once that's all working, for convenience you can create an alias in your local .bashrc by adding this line somewhere
 to avoid typing the long ssh command each time:
 ```
-alias ssh-odb='ssh -N -L 1521:dbname.xx.xx.ac.uk:1521 tails'
+alias ssh-odb='ssh -N -L 1521:dbname.xx.xx.ac.uk:1521 gatename'
 ```
-the -N tells ssh not to open the interactive session to tails, but it still sets up the tunnel itself
+the -N tells ssh not to open the interactive session to gatename, but it still sets up the tunnel itself
 now just use:
 ```
 $ ssh-odb
 and use CTRL-C to terminate the tunnel
 ```
-("ssh -L 1521:odb.cs.ucl.ac.uk:1521 tails" mean "connect localhost port 1521 to odb.cs.ucl.ac.uk port 1521 via tails.cs.ucl.ac.uk" )
+("ssh -L 1521:dbname.xx.xxx.ac.uk:1521 gatename" means "connect localhost port 1521 to dbname.xx.xxx.ac.uk port 1521 via gatename.xx.xxx.ac.uk" )
