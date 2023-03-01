@@ -24,7 +24,7 @@ class DatasetProvider:
         max_records=None,
         uniprot_ids=None,
         **kwargs,
-    ):
+    ) -> PredictedCathDomain:
         raise NotImplementedError
 
 
@@ -51,7 +51,7 @@ class AnnotatedCrhDatasetProvider(DatasetProvider):
         max_records=None,
         uniprot_ids=None,
         **kwargs,
-    ):
+    ) -> PredictedCathDomain:
         if uniprot_ids is not None:
             uniprot_ids = set(uniprot_ids)
 
