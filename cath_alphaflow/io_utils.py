@@ -7,6 +7,7 @@ from dataclasses import fields
 from .models import AFChainID
 from .models import AFDomainID
 from .models import DecoratedCrh
+from .models import RE_UNIPROT_ID
 from .errors import CsvHeaderError
 
 LOG = logging.getLogger(__name__)
@@ -86,6 +87,15 @@ class DecoratedCrhReader(CsvReaderBase):
     object_class = DecoratedCrh
 
 
+class UniprotIDReader(CsvReaderBase):
+    fieldnames = ["uniprot_id"]
+
+    def dict_to_obj(self, row: dict):
+        uniprot_id = row["uniprot_id"]
+        assert RE_UNIPROT_ID.match(uniprot_id)
+        return {"uniprot_id": uniprot_id}
+
+
 def get_csv_dictwriter(csvfile, fieldnames, delimiter="\t", **kwargs):
     """Common CSV writer"""
     return csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter=delimiter, **kwargs)
@@ -97,8 +107,7 @@ def get_csv_dictreader(csvfile, delimiter="\t", **kwargs):
 
 
 def get_uniprot_id_dictreader(csvfile, **kwargs):
-    reader = get_csv_dictreader(csvfile, **kwargs)
-    next(reader)  # header
+    reader = UniprotIDReader(csvfile)
     return reader
 
 
