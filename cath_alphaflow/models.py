@@ -3,6 +3,7 @@ import re
 from typing import List, Callable
 from dataclasses import dataclass, asdict
 
+
 from .errors import ParseError, NoMatchingFragmentError
 from .constants import (
     DEFAULT_HELIX_MIN_LENGTH,
@@ -24,6 +25,25 @@ RE_UNIPROT_DOMAIN_ID = re.compile(
 )
 
 LOG = logging.getLogger(__name__)
+
+
+@dataclass
+class DecoratedCrh:
+    """
+    Holds data corresponding to an entry in a 'Decorated' CATH Resolve Hits file
+    """
+
+    domain_id: str
+    superfamily_id: str
+    sequence_md5: str
+    model_id: str
+    bitscore: float
+    chopping_raw: str
+    chopping_final: str
+    alignment_regs: str
+    cond_evalue: float
+    indp_evalue: float
+    reg_ostats: str
 
 
 @dataclass
