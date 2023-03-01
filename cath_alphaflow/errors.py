@@ -10,6 +10,14 @@ class ArgumentError(BaseError):
     pass
 
 
+class CsvHeaderError(BaseError):
+    pass
+
+
+class NoMatchingMd5Error(BaseError):
+    pass
+
+
 class NoMatchingFragmentError(BaseError):
     pass
 
