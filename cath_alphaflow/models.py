@@ -12,6 +12,8 @@ from .constants import (
     AF_FRAGMENT_OVERLAP_WINDOW,
 )
 
+RE_UNIPROT_ID = re.compile(r"(?P<uniprot_acc>[0-9A-Z]{6}|[0-9A-Z]{10})$")
+
 RE_AF_CHAIN_ID = re.compile(
     r"^AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9])-model_v(?P<version>[0-9]+)$"
 )
