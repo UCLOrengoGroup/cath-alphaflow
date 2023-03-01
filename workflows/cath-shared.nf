@@ -12,6 +12,18 @@ params.af_download_stem = "gs://public-datasets-deepmind-alphafold-v${params.af_
 params.af_cif_raw_dir = "cif_raw"
 params.af_cif_chopped_dir = "cif_chopped"
 
+process ids_from_cif_files {
+    input:
+    path cif_files
+
+    output:
+    path 'ids.txt'
+
+    """
+    find . -name "*.cif" | sed 's#^.\\/##' | sed 's#.cif\$##' > ids.txt
+    """
+}
+
 process create_af_manifest_file {
     input:
     path uniprot_id_file
