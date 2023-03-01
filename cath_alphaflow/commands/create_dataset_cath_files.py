@@ -138,7 +138,7 @@ def create_dataset_cath_files(
     def process_uniprot_ids(uniprot_ids):
         db = OraDB()
         for entry in db.next_cath_dataset_entry(
-            gene3d_dbname=gene3d_dbname,
+            dbname=gene3d_dbname,
             uniprot_ids=uniprot_ids,
         ):
             # sort out all variables that we are going to use in our data files
