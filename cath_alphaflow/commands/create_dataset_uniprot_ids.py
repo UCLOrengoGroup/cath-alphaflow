@@ -49,7 +49,7 @@ def create_dataset_uniprot_ids(uniprot_ids_csv, gene3d_dbname, max_evalue, max_r
     for entry in db.next_cath_dataset_entry(
         max_independent_evalue=max_evalue,
         max_records=max_records,
-        gene3d_dbname=gene3d_dbname,
+        dbname=gene3d_dbname,
     ):
         csv_writer.writerow({"uniprot_acc": entry.uniprot_acc})
 
