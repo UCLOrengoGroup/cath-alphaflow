@@ -140,6 +140,19 @@ def get_sse_summary_writer(csvfile):
     return writer
 
 
+def get_af_uniprot_md5_summary_writer(csvfile):
+    writer = get_csv_dictwriter(
+        csvfile,
+        fieldnames=[
+            "af_chain_id",
+            "uniprot_id",
+            "sequence_md5",
+        ],
+    )
+    writer.writeheader()
+    return writer
+
+
 def get_plddt_summary_writer(csvfile):
     writer = get_csv_dictwriter(
         csvfile,
