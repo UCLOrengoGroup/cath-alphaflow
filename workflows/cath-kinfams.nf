@@ -117,8 +117,8 @@ process create_cath_dataset_from_files {
     grep -F -f uniprot_ids_csv all_crh_csv > filtered_crh_csv
     grep -F -f uniprot_ids_csv all_af_uniprot_md5_csv > filtered_af_uniprot_md5_csv
     cath-af-cli create-cath-dataset-from-files \
-        --input_af_uniprot_md5 filtered_crh_csv \
-        --input_crh filtered_af_crh \
+        --src_af_uniprot_md5 filtered_crh_csv \
+        --src_crh filtered_af_crh \
         --csv_uniprot_ids uniprot_ids_csv \
         --csv_uniprot_md5 ${params.uniprot_md5_csv_fn} \
         --gene3d_crh_output ${params.gene3d_crh_output_fn} \

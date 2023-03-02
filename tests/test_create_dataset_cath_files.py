@@ -31,7 +31,7 @@ SHARED_OPTIONS = (
     "subcommand,missing_options",
     [
         (COMMAND_DB, ["--dbname"]),
-        (COMMAND_FILES, ["--input_af_uniprot_md5", "--input_crh"]),
+        (COMMAND_FILES, ["--src_af_uniprot_md5", "--src_crh"]),
     ],
 )
 def test_create_dataset_usage(subcommand, missing_options):

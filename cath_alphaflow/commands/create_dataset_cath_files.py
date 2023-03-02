@@ -99,13 +99,13 @@ def create_cath_dataset_from_db(*args, **kwargs):
 
 @click.command(cls=BaseCommand)
 @click.option(
-    "--input_af_uniprot_md5",
+    "--src_af_uniprot_md5",
     type=click.File("rt"),
     required=True,
     help="Input: CSV file containing AF chain ID, UniProt IDs, MD5 lookup",
 )
 @click.option(
-    "--input_crh",
+    "--src_crh",
     type=click.File("rt"),
     required=True,
     help="Input: CRH file containing matches",
