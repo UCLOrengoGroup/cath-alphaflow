@@ -38,6 +38,7 @@ setup(
         "prettyconf",
         "biopython",
         "pdb-tools",
+        "pydantic",
     ],
     extras_require={"test": ["pytest"]},
     python_requires=">=3.7",
