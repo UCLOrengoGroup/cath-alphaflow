@@ -38,7 +38,7 @@ def create_md5(fasta_file, uniprot_md5_csv_file):
             # >AFDB:AF-A0A2L2JPH6-F1
             header_id = record.id
             if header_id.startswith("AFDB:"):
-                header_id = header_id[4:]
+                header_id = header_id[5:]
             af_chain_id = header_id
 
             try:
