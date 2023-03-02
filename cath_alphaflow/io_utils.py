@@ -1,7 +1,7 @@
 import csv
 import logging
 import itertools
-from typing import List
+from typing import List, Type
 from dataclasses import fields
 
 from .models import AFChainID
@@ -18,7 +18,7 @@ class CsvReaderBase(csv.DictReader):
     Generic CSV reader that maps rows to objects
     """
 
-    object_class: type[object] = None
+    object_class: Type[object] = None
     fieldnames: List[str] = None
 
     def __init__(
