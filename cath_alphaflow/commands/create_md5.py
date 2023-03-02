@@ -11,9 +11,6 @@ DEFAULT_CHUNK_SIZE = 1000000
 
 LOG = logging.getLogger()
 
-# AFDB:AF-A0A3B9RYK9-F1
-RE_AF_MODEL_ID = re.compile("AFDB:AF-(?P<uniprot_acc>[A-Z0-9]+)-F(?P<frag_num>[0-9]+)$")
-
 
 @click.command()
 @click.option(
@@ -36,13 +33,19 @@ def create_md5(fasta_file, uniprot_md5_csv_file):
         md5_out_writer = get_af_uniprot_md5_summary_writer(out_fh)
         # work through fasta file, calculate output for relevant records
         for record in SeqIO.parse(fasta_file, "fasta"):
-            click.echo(f"record: {record.id} seq='{record.seq[:10]}...'")
+            # click.echo(f"record: {record.id} seq='{record.seq[:10]}...'")
+
             # >AFDB:AF-A0A2L2JPH6-F1
+            header_id = record.id
+            if header_id.startswith("AFDB:"):
+                header_id = header_id[4:]
+            af_chain_id = header_id
+
             try:
-                af_chain_id = record.id.split(":")[1]
                 af_uniprot_id = af_chain_id.split("-")[1]
             except:
-                raise ParseError(f"Failed to parse {record.id} to AlphaFold chain ID")
+                raise ParseError(f"Failed to parse {record.id} as AlphaFold Chain ID")
+
             row_data = {
                 "af_chain_id": af_chain_id,
                 "uniprot_id": af_uniprot_id,
