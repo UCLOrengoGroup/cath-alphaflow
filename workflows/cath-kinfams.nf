@@ -5,14 +5,14 @@ nextflow.enable.dsl=2
 params.dataset_name = 'kinfams'
 
 // Processes to include from the shared module
-include { uniprot_domain_to_uniprot } from './cath-shared'
-include { create_af_manifest_file } from './cath-shared'
-include { retrieve_af_chain_cif_files } from './cath-shared'
-include { chop_cif as CHOP_CIF } from './cath-shared'
-include { cif_paths_to_uniprot_accessions } from './cath-shared'
-include { create_missing_uniprot_domain_ids } from './cath-shared'
-include { ids_from_cif_files as domain_ids_from_cif_files} from './cath-shared'
-include { ids_from_cif_files as chain_ids_from_cif_files } from './cath-shared'
+include { uniprot_domain_to_uniprot } from './cath-shared-core'
+include { create_af_manifest_file } from './cath-shared-core'
+include { retrieve_af_chain_cif_files } from './cath-shared-core'
+include { chop_cif as CHOP_CIF } from './cath-shared-core'
+include { cif_paths_to_uniprot_accessions } from './cath-shared-core'
+include { create_missing_uniprot_domain_ids } from './cath-shared-core'
+include { ids_from_cif_files as domain_ids_from_cif_files} from './cath-shared-core'
+include { ids_from_cif_files as chain_ids_from_cif_files } from './cath-shared-core'
 
 
 // Params defined after include are used locally
