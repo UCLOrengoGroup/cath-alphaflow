@@ -13,6 +13,11 @@ class Settings:
     DSSP_BINARY_PATH = config("DSSP_BINARY_PATH", default="mkdssp")
     DSSP_PDB_DICT = config("DSSP_PDB_DICT", default=None)
 
+    MONGO_USERNAME = config("MONGO_USERNAME", default=None)
+    MONGO_PASSWORD = config("MONGO_PASSWORD", default=None)
+    MONGO_HOST = config("MONGO_HOST", default=None)
+    MONGO_PORT = config("MONGO_PORT", default=27017)
+
     def to_dict(self):
         dict = {}
         for key in dir(self):

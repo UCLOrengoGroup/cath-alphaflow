@@ -1,7 +1,7 @@
 import logging
 import tempfile
 
-from cath_alphaflow.models import AFChainID, AFDomainID
+from cath_alphaflow.models.domains import AFChainID, AFDomainID
 from cath_alphaflow.io_utils import get_af_chain_id_reader, get_af_domain_id_reader
 
 LOG = logging.getLogger(__name__)
@@ -19,8 +19,8 @@ def test_af_chain_id_reader():
 
     with tempfile.NamedTemporaryFile(mode="wt") as tmpfh:
         tmpfh.write("af_chain_id\n")
-        for af_chain_id in expected_af_chain_ids:
-            tmpfh.write(af_chain_id + "\n")
+        for af_id in expected_af_chain_ids:
+            tmpfh.write(af_id + "\n")
         tmpfh.flush()
 
         with open(tmpfh.name, "rt") as new_fh:
@@ -44,8 +44,8 @@ def test_af_domain_id_reader():
 
     with tempfile.NamedTemporaryFile(mode="wt") as tmpfh:
         tmpfh.write("af_domain_id\n")
-        for af_chain_id in expected_af_domain_ids:
-            tmpfh.write(af_chain_id + "\n")
+        for af_id in expected_af_domain_ids:
+            tmpfh.write(af_id + "\n")
         tmpfh.flush()
 
         with open(tmpfh.name, "rt") as new_fh:

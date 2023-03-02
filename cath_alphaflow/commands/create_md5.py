@@ -11,6 +11,9 @@ DEFAULT_CHUNK_SIZE = 1000000
 
 LOG = logging.getLogger()
 
+# AFDB:AF-A0A3B9RYK9-F1
+RE_AF_MODEL_ID = re.compile("AFDB:AF-(?P<uniprot_acc>[A-Z0-9]+)-F(?P<frag_num>[0-9]+)$")
+
 
 @click.command()
 @click.option(

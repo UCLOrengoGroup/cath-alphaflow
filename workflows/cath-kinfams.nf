@@ -1,18 +1,36 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl=2
 
+// Params defined before include are also used in the processes
+params.dataset_name = 'kinfams'
+
+// Processes to include from the shared module
+include { uniprot_domain_to_uniprot } from './cath-shared-core'
+include { create_af_manifest_file } from './cath-shared-core'
+include { retrieve_af_chain_cif_files } from './cath-shared-core'
+include { chop_cif as CHOP_CIF } from './cath-shared-core'
+include { cif_paths_to_uniprot_accessions } from './cath-shared-core'
+include { create_missing_uniprot_domain_ids } from './cath-shared-core'
+include { ids_from_cif_files as domain_ids_from_cif_files} from './cath-shared-core'
+include { ids_from_cif_files as chain_ids_from_cif_files } from './cath-shared-core'
+
+
+// Params defined after include are used locally
+params.dataset_dir = "$workflow.launchDir/tests/fixtures/${params.dataset_name}"
+params.uniprot_domain_ids_csv_fn = "${params.dataset_name}.uniprot_domain_ids.csv"
+params.cath_version = 'v4_3_0'
+
+// Existing Params
 params.gs_bucket = 'gs://public-datasets-deepmind-alphafold'
 params.chunk_size = 1000
 
 params.cath_af_cli = 'cath-af-cli'
-params.cath_version = 'v4_3_0'
 params.cath_data_root = "/cath/data/${params.cath_version}"
 params.all_af_chain_fasta_url = "${params.gs_bucket}/sequences.fasta"
 params.all_af_chain_fasta_file_name = 'all_af2_chain_sequences.fasta'
 params.cath_s95_pdb_dir_name = 'cath_s95_pdb'
 params.cath_s95_foldseek_library_name = 'foldseek_s95_lib'
 params.cath_odb_name = 'GENE3D_21'
-params.dataset_name = 'dataset100k'
 params.dataset_max_records = '100000'
 params.dataset_max_evalue = '1E-50'
 
@@ -36,55 +54,9 @@ params.af_cif_raw_dir = "cif_raw"
 params.af_cif_chopped_dir = "cif_chopped"
 params.af_dssp_raw_dir = "dssp_raw"
 params.plddt_stats_fn = "plddt_summary.csv"
+params.sse_summary_fn = "sse_summary.csv"
 
 def uniprot_ids_file = file("${params.publish_dir}/${params.uniprot_ids_csv_fn}")
-
-// A0A0S2Z4D1/43-337 kinases_4.3-FF-000306.faa
-// Q15831/43-337 kinases_4.3-FF-000306.faa
-
-process create_af_manifest_file {
-    publishDir params.publish_dir, mode: 'copy'
-
-    input:
-    path uniprot_id_file
-    
-    output:
-    path params.af_manifest_fn
-
-    """
-    cat ${uniprot_id_file} | awk '{print "${params.af_download_stem}/AF-"\$1"-F*.cif"}' > ${params.af_manifest_fn}
-    """
-}
-
-process retrieve_af_chain_cif_files {
-    publishDir params.af_cif_raw_dir, mode: 'copy'
-
-    input:
-    path af_model_urls_file
-
-    output:
-    path "AF-*.cif"
-
-    // If Google returns 401 errors then make sure you have logged in:
-    //   gcloud auth application-default login
-    //
-    // see: https://www.nextflow.io/docs/latest/google.html
-
-    """
-    cat ${af_model_urls_file} | (gsutil -m cp -I . || echo "Ignoring non-zero exit code: \$?")
-    """
-}
-
-process retrieve_af_fasta_database {
-    publishDir params.publish_dir, mode: 'copy', overwrite: false
-
-    output:
-    path 'sequences.fasta'
-
-    """
-    gsutil -m cp ${params.af_download_stem}/seqeunces.fasta .
-    """
-}
 
 process kinfam_clusters_to_uniprot_domain_ids {
     publishDir params.publish_dir, mode: 'copy'
@@ -100,44 +72,7 @@ process kinfam_clusters_to_uniprot_domain_ids {
     """
 }
 
-process uniprot_domain_to_uniprot {
-    publishDir params.publish_dir, mode: 'copy'
-
-    input:
-    path uniprot_domain_id
-
-    output:
-    path params.uniprot_ids_fn
-
-    """
-    cat ${uniprot_domain_id} | tr '/' ' ' | awk '{print \$1}' > ${params.uniprot_ids_fn}
-    """
-}
-
-process chop_cif {
-    publishDir params.publish_dir, mode: 'copy'
-
-    input:
-    path uniprot_ids_file
-    path raw_cif_files
-
-    output:
-    path 'cif_chopped/*.cif'
-
-    """
-    mkdir cif_chopped
-    cath-af-cli chop-cif \
-        --cif_in_dir ${params.af_cif_raw_dir} \
-        --id_file ${uniprot_ids_file} \
-        --cif_out_dir cif_chopped/ \
-        --id_type uniprot \
-        --input_file_policy skip \
-        --output_file_policy skip \
-        --af_version ${params.af_version}
-    """
-}
-
-process create_dataset_cath_files {
+process create_cath_dataset_from_db {
     publishDir params.publish_dir, mode: 'copy'
 
     input:
@@ -151,7 +86,7 @@ process create_dataset_cath_files {
     path params.af_cath_orig_annotations_csv_fn
 
     """
-    cath-af-cli create-dataset-cath-files \
+    cath-af-cli create-cath-dataset-from-db \
         --csv_uniprot_ids uniprot_ids_csv \
         --csv_uniprot_md5 ${params.uniprot_md5_csv_fn} \
         --gene3d_crh_output ${params.gene3d_crh_output_fn} \
@@ -162,58 +97,97 @@ process create_dataset_cath_files {
     """
 }
 
-process create_dssp {
+
+process create_cath_dataset_from_files {
     publishDir params.publish_dir, mode: 'copy'
 
     input:
     path 'uniprot_ids_csv'
-    path 'cif_dir'
-    path dssp_dir
+    path 'all_crh_csv'
+    path 'all_af_uniprot_md5_csv'
 
     output:
-    path "${dssp_dir}/*.dssp"
+    path params.uniprot_md5_csv_fn
+    path params.gene3d_crh_output_fn
+    path params.af_domainlist_ids_csv_fn
+    path params.af_chainlist_ids_csv_fn
+    path params.af_cath_orig_annotations_csv_fn
 
     """
-    mkdir dssp
+    grep -F -f uniprot_ids_csv all_crh_csv > filtered_crh_csv
+    grep -F -f uniprot_ids_csv all_af_uniprot_md5_csv > filtered_af_uniprot_md5_csv
+    cath-af-cli create-cath-dataset-from-files \
+        --input_af_uniprot_md5 filtered_crh_csv \
+        --input_crh filtered_af_crh \
+        --csv_uniprot_ids uniprot_ids_csv \
+        --csv_uniprot_md5 ${params.uniprot_md5_csv_fn} \
+        --gene3d_crh_output ${params.gene3d_crh_output_fn} \
+        --af_domainlist_ids ${params.af_domainlist_ids_csv_fn} \
+        --af_chainlist_ids ${params.af_chainlist_ids_csv_fn} \
+        --af_cath_annotations ${params.af_cath_orig_annotations_csv_fn}
+    """
+}
+
+process create_dssp {
+    publishDir "${params.publish_dir}/${params.af_dssp_raw_dir}", mode: 'copy', overwrite: false
+
+    input:
+    path 'ids.csv'
+    path cif_files
+
+    output:
+    path "*.dssp"
+
+    """
+    find . -name "*.cif" | sed 's#^./##' | sed 's/.cif\$//' > manually_created_ids.csv
     cath-af-cli convert-cif-to-dssp \
-        --cif_in_dir cif_dir \
-        --id_file uniprot_ids_csv \
+        --cif_in_dir . \
+        --id_file manually_created_ids.csv \
         --cif_suffix .cif \
-        --dssp_out_dir ${dssp_dir}
+        --dssp_out_dir .
     """
 }
 
 
 process create_sse_summary {
-    publishDir params.publish_dir, mode: 'copy'
-
     input:
-    path 'uniprot_ids_csv'
-    path 'dssp_dir'
+    val domain_ids
+    path dssp_files
 
     output:
     path 'dssp_summary.csv'
 
     """
+    echo ${domain_ids} > af_ids_csv
     cath-af-cli convert-dssp-to-sse-summary \
-        --dssp_dir dssp_dir \
-        --id_file uniprot_ids_csv \
-        --sse_out_file dssp_summary.csv
+        --dssp_dir . \
+        --id_file af_ids_csv \
+        --id_type af \
+        --sse_out_file dssp_summary.csv \
+        --dssp_check_policy=error
     """
 }
 
 process create_plddt_summary {
+
+    // HACK: 
+    // This currently expects to find CIF files in $publish_dir which goes
+    // against best practices. If anyone can think of a neat way to coordinate 
+    // the domain/chain id streams without this hack, then please change.  
+
     input:
-    path 'uniprot_ids_csv'
-    path 'cif_chopped'
+    path 'af_ids_csv'
+    path _chain_cif_files_list
 
     output:
     path params.plddt_stats_fn
 
     """
+    # HACK
+    CIF_DIR='${params.publish_dir}/${params.af_cif_raw_dir}'
     cath-af-cli convert-cif-to-plddt-summary \
-        --cif_in_dir cif_chopped \
-        --id_file uniprot_ids_csv \
+        --cif_in_dir \$CIF_DIR \
+        --id_file af_ids_csv \
         --plddt_stats_file ${params.plddt_stats_fn}
     """
 }
@@ -267,80 +241,115 @@ process uniprot_csv_from_af_domains {
     """
 }
 
-process create_af_uniprot_md5_from_fasta {
+process filter_uniprot_id_file {
     input:
-    path af_full_fasta_ch
-    path uniprot_domain_ids_ch
+    path 'full_af_domain_id_file'
+    path 'required_uniprot_ids'
 
     output:
-    path 'af_uniprot_md5.csv' 
+    path 'filtered_af_domain_id_file'
 
     """
-    cath-af-cli calculate-md5 \
-        --fasta ${af_full_fasta_ch} \
-        --id_file ${uniprot_domain_ids_ch} \
-        --id_type uniprot_domain_id \
-        --uniprot_md5_csv af_uniprot_md5.csv
+    grep -F -f required_uniprot_ids full_af_domain_id_file > filtered_af_domain_id_file
     """
+}
+
+workflow AF_DOWNLOAD_CIF {
+    take:
+        uniprot_domain_ids_ch
+    main:
+        def _cif_files = uniprot_domain_ids_ch.splitText(by: 100, file: true)
+            | uniprot_domain_to_uniprot
+            | create_af_manifest_file
+            | retrieve_af_chain_cif_files
+    emit:
+        cif_files = _cif_files
 }
 
 workflow AF_CHOP_CIF {
 
     take:
+        chain_cif_files
         uniprot_domain_ids_ch
-    
     main:
-        def cif_files = uniprot_domain_ids_ch.splitText(by: 100, file: true)
-            | uniprot_domain_to_uniprot
-            | create_af_manifest_file
-            | retrieve_af_chain_cif_files
-
-        cif_files.collect()
-
-        chop_cif( uniprot_domain_ids_ch.splitText(by: 100, file: true), cif_files )
+        CHOP_CIF( chain_cif_files, uniprot_domain_ids_ch )
+    emit:
+        cif_files = CHOP_CIF.out
 }
 
+workflow AF_ANNOTATE_CHAINS_CIF {
+    take:
+        af_chain_cif_files_ch
+        af_domain_
+}
 
 workflow AF_ANNOTATE_DOMAINS_CIF {
 
-    def cif_chopped_dir = file("${params.publish_dir}/${params.af_cif_chopped_dir}")
-    def cif_raw_dir = file("${params.publish_dir}/${params.af_cif_raw_dir}")
-    def dssp_raw_dir = file("${params.publish_dir}/${params.af_dssp_raw_dir}")
-    def plddt_file = file("${params.publish_dir}/${params.plddt_stats_fn}")
+    take:
+        af_chain_cif_files_ch
+        af_domain_cif_files_ch
 
-    def af_domain_ids_ch = af_domain_ids_from_cif_dir(cif_chopped_dir)
-    def cif_ids_ch = ids_from_cif_dir(cif_raw_dir).splitText(by: 100, file: true)
+    main:
+        def _plddt_file = file("${params.publish_dir}/${params.plddt_stats_fn}")
+        def _sse_summary_file = file("${params.publish_dir}/${params.sse_summary_fn}")
 
-    def uniprot_csv_ch = uniprot_csv_from_af_domains(af_domain_ids_ch)
+        def af_chain_ids_ch = chain_ids_from_cif_files(af_chain_cif_files_ch)
+        def af_domain_ids_ch = domain_ids_from_cif_files(af_domain_cif_files_ch)
 
-    def uniprot_dataset = create_dataset_cath_files(uniprot_csv_ch)
+        def uniprot_csv_ch = uniprot_csv_from_af_domains(af_domain_ids_ch)
 
-    def dssp_files_ch = create_dssp(cif_ids_ch, cif_raw_dir, dssp_raw_dir)
+        def uniprot_dataset = create_cath_dataset_from_db(uniprot_csv_ch)
 
-    def af_domain_ids_chunked_ch = af_domain_ids_ch.splitText(by: 100, file: true)
+        // def uniprot_dataset = create_cath_dataset_from_files(uniprot_csv_ch, all_crh, all_af_uniprot_md5)
 
-    def plddt_summary_ch = create_plddt_summary(af_domain_ids_chunked_ch, cif_raw_dir)
-    
-    plddt_summary_ch.collectFile(name: plddt_file)
+        def chain_dssp_files_ch = create_dssp(af_chain_ids_ch, af_chain_cif_files_ch)
 
-    dssp_files_ch.collect()
+        // HACK:
+        // simplest way to proceed here is to finish creating all the DSSP files
+        // then assume that DSSP chain files can be found in publish_dir (against best practices)
+        // so collect all these file names and make that a dependency of the next step
+        def all_chain_dssp_files = chain_dssp_files_ch.collectFile(name: "chain_dssp_files.txt")
 
-    create_sse_summary(af_domain_ids_ch, dssp_raw_dir)
+        // The pLDDT process requires meta data that is present in the chain AF CIF file.
+        // However, this metadata is not present in the domain CIF file after chopping. 
+        // So, while this process needs to take the AF domain IDs as input, it also needs 
+        // to be given the CHAIN CIF files and a chopping (rather than the DOMAIN CIF files)
+        def plddt_summary_ch = create_plddt_summary(af_domain_ids_ch, all_chain_dssp_files)
+        
+        // we now need to combine the channels so that we get dssp files with the same
+        // uniprot ids as the dssp files
 
+        def sse_summary_ch = create_sse_summary(af_domain_ids_ch, all_chain_dssp_files)
+        sse_summary_ch.collectFile(name: _sse_summary_file)
+
+        // TODO:
+        // combine these outputs into a single spreadsheet...
+    emit:
+        plddt_summary_file = _plddt_file
+        sse_summary_file = _sse_summary_file 
 }
 
 workflow {
-    def kinfams_ch = Channel.fromPath(params.af_to_cluster_file, checkIfExists: true)
-
-    def af_full_fasta_ch = retrieve_af_fasta_database()
+    def kinfams_ch = Channel.fromPath(params.af_to_cluster_fn, checkIfExists: true)
 
     def uniprot_domain_ids_ch = kinfam_clusters_to_uniprot_domain_ids(kinfams_ch)
 
     def uniprot_csv_ch = uniprot_csv_from_af_domains(uniprot_domain_ids_ch)
-    def uniprot_dataset = create_dataset_cath_files(uniprot_csv_ch)
+    def uniprot_dataset = create_cath_dataset_from_db(uniprot_csv_ch)
 
-    def af_uniprot_md5_ch = create_af_uniprot_md5_from_fasta(af_full_fasta_ch, uniprot_domain_ids_ch)
+    // def af_full_fasta_ch = retrieve_af_fasta_database()
+    // def af_uniprot_md5_ch = create_af_uniprot_md5_from_fasta(af_full_fasta_ch, uniprot_domain_ids_ch)
+    AF_DOWNLOAD_CIF(uniprot_domain_ids_ch)
+    def chain_cif_files = AF_DOWNLOAD_CIF.out.cif_files
 
-    AF_CHOP_CIF (uniprot_domain_ids_ch)
-    AF_ANNOTATE_DOMAINS_CIF ()
+    AF_CHOP_CIF(chain_cif_files, uniprot_domain_ids_ch)
+    def domain_cif_files = AF_CHOP_CIF.out.cif_files
+
+    AF_ANNOTATE_DOMAINS_CIF(chain_cif_files, domain_cif_files)
+
+    // Collect results together
+    // AF_COLLECT_RESULTS(
+    //     AF_ANNOTATE_DOMAINS_CIF.out.plddt_file,
+    //     AF_ANNOTATE_DOMAINS_CIF.out.sse_summary_file,
+    // )
 }

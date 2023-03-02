@@ -8,7 +8,7 @@ from typing import Callable, Union
 from Bio.PDB import MMCIFParser
 from Bio.PDB.mmcifio import MMCIFIO
 
-from .models import Chopping
+from .models.domains import Chopping
 from .errors import ChoppingError, MultipleModelsError, MultipleChainsError, ParseError
 
 LOG = logging.getLogger(__name__)
