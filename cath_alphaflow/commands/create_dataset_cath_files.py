@@ -128,6 +128,7 @@ class CathDatasetGeneratorBase(pydantic.BaseModel):
     af_cath_annotations: typing.Any  # click.File
     chunk_size: int
     af_version: int
+    fragment_number: int
     crh_output_writer: typing.Any = None
     csv_uniprot_md5_writer: typing.Any = None
     af_domainlist_writer: typing.Any = None
@@ -155,9 +156,7 @@ class CathDatasetGeneratorBase(pydantic.BaseModel):
         ):
             uniprot_ids = [row.get("uniprot_id") for row in chunked_uniprot_rows]
             click.echo(
-                "Processing %s UniProtIDs (e.g. %s...)",
-                len(uniprot_ids),
-                uniprot_ids,
+                f"Processing {len(uniprot_ids)} UniProtIDs (e.g. {uniprot_ids} ...)",
             )
             self.process_uniprot_ids(uniprot_ids)
 
