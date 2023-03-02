@@ -47,7 +47,8 @@ def dump_config():
 
 cli.add_command(dump_config)
 cli.add_command(create_dataset_uniprot_ids.create_dataset_uniprot_ids)
-cli.add_command(create_dataset_cath_files.create_dataset_cath_files)
+cli.add_command(create_dataset_cath_files.create_cath_dataset_from_db)
+cli.add_command(create_dataset_cath_files.create_cath_dataset_from_files)
 cli.add_command(optimise_domain_boundaries.optimise_domain_boundaries)
 cli.add_command(convert_dssp_to_sse_summary.convert_dssp_to_sse_summary)
 cli.add_command(convert_cif_to_dssp.convert_cif_to_dssp)

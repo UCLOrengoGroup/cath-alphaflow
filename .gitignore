@@ -150,3 +150,11 @@ config.env
 dataset100k
 kinfams-results/
 kinfams-backup/
+datasets/
+cath-test-hpc-dataset100/
+results-*/
+nextflow
+
+# Don't add confidential settings to github
+cath_alphaflow/settings.py
+tests/examples/eg_oracle.py

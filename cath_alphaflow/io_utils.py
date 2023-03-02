@@ -1,26 +1,113 @@
 import csv
 import logging
 import itertools
+from typing import List, Type
+from dataclasses import fields
 
 from .models.domains import AFChainID
 from .models.domains import AFDomainID
+from .models import DecoratedCrh
+from .models import RE_UNIPROT_ID
+from .errors import CsvHeaderError
 
 LOG = logging.getLogger(__name__)
 
 
-def get_csv_dictwriter(csvfile, fieldnames, **kwargs):
+class CsvReaderBase(csv.DictReader):
+    """
+    Generic CSV reader that maps rows to objects
+    """
+
+    object_class: Type[object] = None
+    fieldnames: List[str] = None
+
+    def __init__(
+        self,
+        f,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(f, *args, **kwargs)
+        self._seen_header = False
+
+        if not self.fieldnames:
+            if "fieldnames" in kwargs:
+                fieldnames = kwargs["fieldnames"]
+            else:
+                fieldnames = [
+                    f.name
+                    for f in fields(self.object_class)
+                    if not f.name.startswith("_")
+                ]
+            self.fieldnames = fieldnames
+
+    def __next__(self):
+        """
+        Checks the headers and handles converting the CSV row to object
+        """
+
+        dictrow = super().__next__()
+        if not self._seen_header:
+            self._seen_header = True
+            if list(dictrow.keys()) != self.fieldnames:
+                msg = (
+                    f"expected first line of {self.__class__.__name__} "
+                    f"to contain fieldnames {self.fieldnames}, "
+                    f"but found {dictrow.keys()}) (reader: {self.reader})"
+                )
+                raise CsvHeaderError(msg)
+            dictrow = super().__next__()
+
+        if not self.object_class:
+            return dictrow
+
+        return self.dict_to_obj(dictrow)
+
+    def dict_to_obj(self, row: dict):
+        return self.return_class(**row)
+
+
+class AFDomainIDReader(CsvReaderBase):
+    object_class = AFDomainID
+    fieldnames = ["af_domain_id"]
+
+    def dict_to_obj(self, row: dict):
+        return self.object_class.from_str(row["af_domain_id"])
+
+
+class AFChainIDReader(CsvReaderBase):
+    object_class = AFChainID
+    fieldnames = ["af_chain_id"]
+
+    def dict_to_obj(self, row: dict):
+        return self.object_class.from_str(row["af_chain_id"])
+
+
+class DecoratedCrhReader(CsvReaderBase):
+    object_class = DecoratedCrh
+
+
+class UniprotIDReader(CsvReaderBase):
+    fieldnames = ["uniprot_id"]
+
+    def dict_to_obj(self, row: dict):
+        uniprot_id = row["uniprot_id"]
+        assert RE_UNIPROT_ID.match(uniprot_id)
+        return {"uniprot_id": uniprot_id}
+
+
+def get_csv_dictwriter(csvfile, fieldnames, delimiter="\t", **kwargs):
     """Common CSV writer"""
-    return csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter="\t", **kwargs)
+    return csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter=delimiter, **kwargs)
 
 
-def get_csv_dictreader(csvfile, **kwargs):
+def get_csv_dictreader(csvfile, delimiter="\t", **kwargs):
     """Common CSV reader"""
-    return csv.DictReader(csvfile, delimiter="\t", **kwargs)
+    return csv.DictReader(csvfile, delimiter=delimiter, **kwargs)
 
 
 def get_uniprot_id_dictreader(csvfile, **kwargs):
-    reader = get_csv_dictreader(csvfile, **kwargs)
-    next(reader)  # header
+    reader = UniprotIDReader(csvfile)
     return reader
 
 
@@ -67,36 +154,6 @@ def get_plddt_summary_writer(csvfile):
     return writer
 
 
-class AFDomainIDReader(csv.DictReader):
-    def __init__(self, *args):
-        self._seen_header = False
-        super().__init__(*args, fieldnames=["af_domain_id"])
-
-    def __next__(self):
-        dictrow = super().__next__()
-        if not self._seen_header:
-            self._seen_header = True
-            return dictrow
-        else:
-            return AFDomainID.from_str(dictrow["af_domain_id"])
-
-
-class AFChainIDReader(csv.DictReader):
-    def __init__(self, *args):
-        LOG.info("AFChainIDReader.args: %s", args)
-        self._seen_header = False
-        super().__init__(*args, fieldnames=["af_chain_id"])
-        LOG.info("AFChainIDReader.self: %s", self)
-
-    def __next__(self):
-        dictrow = super().__next__()
-        if not self._seen_header:
-            self._seen_header = True
-            return dictrow
-        else:
-            return AFChainID.from_str(dictrow["af_chain_id"])
-
-
 def yield_first_col(infile, *, header=True):
     if header:
         next(infile)
@@ -107,13 +164,11 @@ def yield_first_col(infile, *, header=True):
 
 def get_af_domain_id_reader(csvfile):
     reader = AFDomainIDReader(csvfile)
-    next(reader)
     return reader
 
 
 def get_af_chain_id_reader(csvfile):
     reader = AFChainIDReader(csvfile)
-    next(reader)
     return reader
 
 
