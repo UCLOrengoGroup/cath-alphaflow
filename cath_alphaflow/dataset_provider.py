@@ -1,7 +1,7 @@
 import logging
 
-from cath_alphaflow.models import PredictedCathDomain
-from cath_alphaflow.models import DecoratedCrh
+from cath_alphaflow.models.domains import PredictedCathDomain
+from cath_alphaflow.models.domains import DecoratedCrh
 from cath_alphaflow.io_utils import DecoratedCrhReader
 from cath_alphaflow.errors import NoMatchingMd5Error
 

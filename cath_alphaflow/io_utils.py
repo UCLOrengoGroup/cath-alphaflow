@@ -6,8 +6,8 @@ from dataclasses import fields
 
 from .models.domains import AFChainID
 from .models.domains import AFDomainID
-from .models import DecoratedCrh
-from .models import RE_UNIPROT_ID
+from .models.domains import DecoratedCrh
+from .models.domains import RE_UNIPROT_ID
 from .errors import CsvHeaderError
 
 LOG = logging.getLogger(__name__)
