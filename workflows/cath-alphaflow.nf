@@ -87,7 +87,7 @@ process create_dataset_cath_files {
         path params.af_cath_orig_annotations_csv, emit: af_cath_orig_annotations_csv
 
     """
-    cath-af-cli create-dataset-cath-files \
+    cath-af-cli create-cath-dataset-from-db \
         --csv_uniprot_ids ${params.uniprot_ids_csv} \
         --csv_uniprot_md5 ${params.uniprot_md5_csv} \
         --gene3d_crh_output ${params.gene3d_crh_output} \

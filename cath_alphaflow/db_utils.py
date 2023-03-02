@@ -3,6 +3,7 @@ import cx_Oracle
 
 from cath_alphaflow.settings import get_default_settings
 from cath_alphaflow.models import PredictedCathDomain
+from cath_alphaflow.dataset_provider import DatasetProvider
 
 LOG = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ DEFAULT_USER = config.ORACLE_DB_USERNAME
 DEFAULT_PASSWORD = config.ORACLE_DB_PASSWORD
 
 
-class OraDB(cx_Oracle.Connection):
+class OraDB(DatasetProvider, cx_Oracle.Connection):
     def __init__(
         self,
         host=DEFAULT_HOST,
@@ -65,7 +66,7 @@ class OraDB(cx_Oracle.Connection):
     def next_cath_dataset_entry(
         self,
         *,
-        gene3d_dbname,
+        dbname,
         max_independent_evalue=None,
         max_records=None,
         uniprot_ids=None,
@@ -116,8 +117,8 @@ class OraDB(cx_Oracle.Connection):
         RESOLVED                                AS chopping,
         INDEPENDENT_EVALUE                      AS indp_evalue
     FROM
-        {gene3d_dbname}.CATH_DOMAIN_PREDICTIONS cdp
-        INNER JOIN {gene3d_dbname}.UNIPROT_PRIM_ACC upa
+        {dbname}.CATH_DOMAIN_PREDICTIONS cdp
+        INNER JOIN {dbname}.UNIPROT_PRIM_ACC upa
             ON (cdp.SEQUENCE_MD5 = upa.SEQUENCE_MD5)
     WHERE
         {sql_where}

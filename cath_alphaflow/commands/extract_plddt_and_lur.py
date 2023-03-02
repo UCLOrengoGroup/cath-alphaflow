@@ -44,6 +44,11 @@ LOG = logging.getLogger()
     help="Output: pLDDT and LUR output file",
 )
 @click.option(
+    "--af_version",
+    type=int,
+    help=f"Option: specify the AF version when parsing uniprot ids",
+)
+@click.option(
     "--cif_suffix",
     type=str,
     default=".cif",
@@ -54,16 +59,24 @@ def convert_cif_to_plddt_summary(
     id_file,
     id_type,
     plddt_stats_file,
+    af_version,
     cif_suffix,
 ):
     "Creates summary of secondary structure elements (SSEs) from DSSP files"
+
+    if id_type == ID_TYPE_UNIPROT_DOMAIN and af_version is None:
+        raise click.UsageError(
+            f"option --af_version must be specified when using id_type={id_type}"
+        )
 
     plddt_out_writer = get_plddt_summary_writer(plddt_stats_file)
 
     for af_domain_id_str in yield_first_col(id_file):
 
         if id_type == ID_TYPE_UNIPROT_DOMAIN:
-            af_domain_id = AFDomainID.from_uniprot_str(af_domain_id_str)
+            af_domain_id = AFDomainID.from_uniprot_str(
+                af_domain_id_str, version=af_version
+            )
         elif id_type == ID_TYPE_AF_DOMAIN:
             af_domain_id = AFDomainID.from_str(af_domain_id_str)
         else:
