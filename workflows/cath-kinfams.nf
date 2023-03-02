@@ -297,7 +297,10 @@ workflow AF_ANNOTATE_DOMAINS_CIF {
         def af_domain_ids_ch = domain_ids_from_cif_files(af_domain_cif_files_ch)
 
         def uniprot_csv_ch = uniprot_csv_from_af_domains(af_domain_ids_ch)
-        def uniprot_dataset = create_dataset_cath_files(uniprot_csv_ch)
+
+        def uniprot_dataset = create_cath_dataset_from_db(uniprot_csv_ch)
+
+        // def uniprot_dataset = create_cath_dataset_from_files(uniprot_csv_ch, all_crh, all_af_uniprot_md5)
 
         def chain_dssp_files_ch = create_dssp(af_chain_ids_ch, af_chain_cif_files_ch)
 
@@ -332,7 +335,7 @@ workflow {
     def uniprot_domain_ids_ch = kinfam_clusters_to_uniprot_domain_ids(kinfams_ch)
 
     def uniprot_csv_ch = uniprot_csv_from_af_domains(uniprot_domain_ids_ch)
-    def uniprot_dataset = create_dataset_cath_files(uniprot_csv_ch)
+    def uniprot_dataset = create_cath_dataset_from_db(uniprot_csv_ch)
 
     // def af_full_fasta_ch = retrieve_af_fasta_database()
     // def af_uniprot_md5_ch = create_af_uniprot_md5_from_fasta(af_full_fasta_ch, uniprot_domain_ids_ch)
