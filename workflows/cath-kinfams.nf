@@ -171,7 +171,7 @@ process create_sse_summary {
 process create_plddt_summary {
 
     // HACK: 
-    // This currently expects to find dssp files in 'publish_dir' which goes
+    // This currently expects to find CIF files in $publish_dir which goes
     // against best practices. If anyone can think of a neat way to coordinate 
     // the domain/chain id streams without this hack, then please change.  
 
@@ -184,9 +184,9 @@ process create_plddt_summary {
 
     """
     # HACK
-    DSSP_DIR='${params.publish_dir}/${params.af_dssp_raw_dir}'
+    CIF_DIR='${params.publish_dir}/${params.af_cif_raw_dir}'
     cath-af-cli convert-cif-to-plddt-summary \
-        --cif_in_dir $DSSP_DIR \
+        --cif_in_dir \$CIF_DIR \
         --id_file af_ids_csv \
         --plddt_stats_file ${params.plddt_stats_fn}
     """
