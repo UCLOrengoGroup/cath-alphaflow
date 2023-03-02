@@ -1,7 +1,7 @@
 import logging
 import tempfile
 
-from cath_alphaflow.models import AFChainID, AFDomainID
+from cath_alphaflow.models.domains import AFChainID, AFDomainID
 from cath_alphaflow.io_utils import get_af_chain_id_reader, get_af_domain_id_reader
 
 LOG = logging.getLogger(__name__)

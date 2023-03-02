@@ -2,7 +2,7 @@ import logging
 import cx_Oracle
 
 from cath_alphaflow.settings import get_default_settings
-from cath_alphaflow.models import PredictedCathDomain
+from cath_alphaflow.models.domains import PredictedCathDomain
 from cath_alphaflow.dataset_provider import DatasetProvider
 
 LOG = logging.getLogger(__name__)

@@ -7,7 +7,7 @@ from cath_alphaflow.io_utils import (
     yield_first_col,
     get_plddt_summary_writer,
 )
-from cath_alphaflow.models import AFDomainID, LURSummary, pLDDTSummary
+from cath_alphaflow.models.domains import AFDomainID, LURSummary, pLDDTSummary
 from cath_alphaflow.constants import (
     MIN_LENGTH_LUR,
     ID_TYPE_AF_DOMAIN,

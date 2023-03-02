@@ -3,9 +3,8 @@ import re
 from typing import List, Callable
 from dataclasses import dataclass, asdict
 
-
-from .errors import ParseError, NoMatchingFragmentError
-from .constants import (
+from ..errors import ParseError, NoMatchingFragmentError
+from ..constants import (
     DEFAULT_HELIX_MIN_LENGTH,
     DEFAULT_STRAND_MIN_LENGTH,
     AF_FRAGMENT_MAX_RESIDUES,

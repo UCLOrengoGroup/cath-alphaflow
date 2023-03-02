@@ -3,11 +3,13 @@ from pathlib import Path
 import click
 import csv
 import hashlib
+import re
 
 from Bio import SeqIO
 
+from cath_alphaflow.errors import ParseError
 from cath_alphaflow.io_utils import yield_first_col, get_csv_dictwriter
-from cath_alphaflow.models import AFDomainID
+from cath_alphaflow.models.domains import AFDomainID
 from cath_alphaflow.constants import (
     ID_TYPE_AF_DOMAIN,
     ID_TYPE_UNIPROT_DOMAIN,
@@ -18,25 +20,27 @@ DEFAULT_CHUNK_SIZE = 1000000
 
 LOG = logging.getLogger()
 
+# AFDB:AF-A0A3B9RYK9-F1
+RE_AF_MODEL_ID = re.compile("AFDB:AF-(?P<uniprot_acc>[A-Z0-9]+)-F(?P<frag_num>[0-9]+)$")
+
 
 @click.command()
 @click.option(
     "--id_file",
     type=click.File("rt"),
-    required=True,
-    help="Input: CSV file containing list of ids to convert from CIF to DSSP",
+    help="Input: CSV file containing list of ids to convert MD5 (optional)",
 )
 @click.option(
     "--fasta",
     "fasta_file",
-    type=click.Path(exists=True, file_okay=True, dir_okay=False),
+    type=click.File("rt"),
     required=True,
     help=f"Input: the fasta database containing all AF sequences",
 )
 @click.option(
     "--id_type",
     type=click.Choice([ID_TYPE_AF_DOMAIN, ID_TYPE_UNIPROT_DOMAIN, ID_TYPE_SIMPLE]),
-    default=ID_TYPE_AF_DOMAIN,
+    default=ID_TYPE_SIMPLE,
     help=f"Option: specify the type of ID to specify the chopping [{ID_TYPE_AF_DOMAIN}]",
 )
 @click.option(
@@ -55,34 +59,76 @@ LOG = logging.getLogger()
 def create_md5(id_file, fasta_file, id_type, uniprot_md5_csv_file, chunk_size):
     "Calculate MD5 for FASTA sequences"
 
-    csv_fieldnames = ["uniprot_acc", "sequence_md5"]
-    with open(uniprot_md5_csv_file, mode="wt") as out_fp:
-        csv_writer = get_csv_dictwriter(out_fp, fieldnames=csv_fieldnames)
-        csv_writer.writeheader()
+    csv_fieldnames = ["uniprot_acc", "sequence_md5", "af_model_id"]
+    csv_writer = get_csv_dictwriter(uniprot_md5_csv_file, fieldnames=csv_fieldnames)
+    csv_writer.writeheader()
 
+    id_file_has_header = False
+
+    LOG.info(f"FASTA_FILE:            {fasta_file.name}")
+    LOG.info(f"UNIPROT_MD5_CSV_FILE:  {uniprot_md5_csv_file.name}")
+    LOG.info(f"ID_FILE:               {id_file.name if id_file else None}")
+    LOG.info(f"ID_TYPE:               {id_type}")
+    LOG.info(f"ID_FILE_HAS_HEADER:    {id_file_has_header}")
+    LOG.info(f"CHUNK_SIZE:            {chunk_size}")
+
+    rows_written = 0
+    if id_file:
         # chunk uniprot ids (in case we have many millions)
-        for uniprot_ids in yield_first_col_chunked(
-            id_file, id_type, chunk_size=chunk_size
+        for chunk_num, uniprot_ids in enumerate(
+            yield_first_col_chunked(
+                id_file, id_type, chunk_size=chunk_size, header=id_file_has_header
+            ),
+            1,
         ):
+            LOG.info(
+                f"Processing UniProts [chunk={chunk_num}]: uniprot_ids={len(uniprot_ids)} (e.g. {sorted(uniprot_ids)[:2]})"
+            )
+            rows_written += process_fasta_file(
+                fasta_file, csv_writer, uniprot_ids=uniprot_ids
+            )
+    else:
+        rows_written = process_fasta_file(fasta_file, csv_writer)
 
-            # work through fasta file, calculate output for relevant records
-            with open(fasta_file, "rt") as fasta_fp:
-                for record in SeqIO.parse(fasta_fp, "fasta"):
-                    click.echo(f"record: {record.id} seq='{record.seq[:10]}...'")
+    LOG.info(f"Wrote {rows_written} rows")
 
-                    _db, uniprot_acc, _name = record.id.split("|")
+    LOG.info("DONE")
 
-                    if uniprot_acc not in uniprot_ids:
-                        click.echo(f"skipping: {record.id}")
-                        continue
 
-                    row_data = {
-                        "uniprot_acc": uniprot_acc,
-                        "sequence_md5": str_to_md5(record.seq),
-                    }
-                    csv_writer.write(row_data)
+def process_fasta_file(fasta_file, csv_writer, uniprot_ids=None):
 
-    click.echo("DONE")
+    rows_written = 0
+
+    fasta_file.seek(0)
+
+    # work through fasta file, calculate output for relevant records
+    for record_num, record in enumerate(SeqIO.parse(fasta_file, "fasta"), 1):
+
+        # >AFDB:AF-A0A3B9RYK9-F1
+        match = RE_AF_MODEL_ID.match(record.id)
+        if not match:
+            msg = f"failed to parse AF model id from fasta id '{record.id}' (seq: {record_num})"
+            raise ParseError(msg)
+
+        uniprot_acc = match.group("uniprot_acc")
+        frag_num = match.group("frag_num")
+
+        if uniprot_ids and uniprot_acc not in uniprot_ids:
+            LOG.debug(
+                f"id={record.id} seq='{record.seq[:10]}...' uniprot_acc={uniprot_acc} (skipping)"
+            )
+            continue
+
+        rows_written += 1
+
+        row_data = {
+            "uniprot_acc": uniprot_acc,
+            "sequence_md5": str_to_md5(record.seq),
+            "af_model_id": record.id,
+        }
+        csv_writer.writerow(row_data)
+
+    return rows_written
 
 
 def str_to_md5(in_str):
@@ -90,10 +136,10 @@ def str_to_md5(in_str):
     return md5
 
 
-def yield_first_col_chunked(id_file, id_type, chunk_size):
+def yield_first_col_chunked(id_file, id_type: str, chunk_size: int, header: bool):
 
     uniprot_ids = set()
-    for id_str in yield_first_col(id_file):
+    for id_str in yield_first_col(id_file, header=header):
         uniprot_id = None
         if id_type == ID_TYPE_AF_DOMAIN:
             uniprot_id = AFDomainID.from_str(id_str).uniprot_acc

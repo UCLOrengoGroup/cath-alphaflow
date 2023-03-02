@@ -14,7 +14,7 @@ from cath_alphaflow.io_utils import (
     yield_first_col,
     get_sse_summary_writer,
 )
-from cath_alphaflow.models import SecStrSummary, AFDomainID
+from cath_alphaflow.models.domains import SecStrSummary, AFDomainID
 from cath_alphaflow.constants import (
     DEFAULT_DSSP_SUFFIX,
     ID_TYPE_SIMPLE,

@@ -1,7 +1,7 @@
 import pytest
 
 from cath_alphaflow.errors import ParseError
-from cath_alphaflow.models import Segment, Chopping, AFChainID, AFDomainID
+from cath_alphaflow.models.domains import Segment, Chopping, AFChainID, AFDomainID
 
 
 def test_af_ids():

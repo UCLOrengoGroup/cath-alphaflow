@@ -8,7 +8,7 @@ from cath_alphaflow.cli import cli
 from cath_alphaflow.commands.optimise_domain_boundaries import (
     calculate_domain_id_post_tailchop,
 )
-from cath_alphaflow.models import AFDomainID
+from cath_alphaflow.models.domains import AFDomainID
 
 
 UNIPROT_IDS = ["P00520"]
