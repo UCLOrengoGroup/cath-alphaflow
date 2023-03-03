@@ -156,7 +156,7 @@ class CathDatasetGeneratorBase(pydantic.BaseModel):
         ):
             uniprot_ids = [row.get("uniprot_id") for row in chunked_uniprot_rows]
             click.echo(
-                f"Processing {len(uniprot_ids)} UniProtIDs (e.g. {uniprot_ids} ...)",
+                f"Processing {len(uniprot_ids)} UniProtIDs (e.g. {uniprot_ids[:3]} ...)",
             )
             self.process_uniprot_ids(uniprot_ids)
 
