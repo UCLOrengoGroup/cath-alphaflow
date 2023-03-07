@@ -36,14 +36,7 @@ def cif_to_fasta(cif_path=Path, chain_id=0):
         sequence = ""
         for residue in chain:
             resname = residue.get_resname()
-            if (
-                resname
-                not in {
-                    "HOH",
-                    "H2O",
-                }
-                and seq1(resname) != "X"
-            ):
+            if seq1(resname) != "X":
                 sequence += seq1(resname)
     return header, sequence
 
