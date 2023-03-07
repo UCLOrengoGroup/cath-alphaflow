@@ -37,7 +37,7 @@ class AnnotatedCrhDatasetProvider(DatasetProvider):
     def build_af_md5_uniprot_mapping(self):
         md5_to_uniprot = dict()
         LOG.info("Building UniProt to MD5 mapping ...")
-        with open(self.af_uniprot_md5_file, "rt") as fh:
+        with self.af_uniprot_md5_file as fh:
             for line in fh:
                 af_id, uniprot_id, md5 = line.strip().split()
                 if md5 not in md5_to_uniprot:
