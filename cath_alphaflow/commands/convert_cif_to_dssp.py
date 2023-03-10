@@ -3,9 +3,11 @@ from pathlib import Path
 import click
 import subprocess
 from cath_alphaflow.io_utils import yield_first_col
-
-from cath_alphaflow.constants import DEFAULT_CIF_SUFFIX, DEFAULT_DSSP_SUFFIX
+from cath_alphaflow.models.domains import AFDomainID
+from cath_alphaflow.constants import DEFAULT_CIF_SUFFIX, DEFAULT_DSSP_SUFFIX,ID_TYPE_AF_DOMAIN,ID_TYPE_UNIPROT_DOMAIN
 from cath_alphaflow.settings import get_default_settings
+from cath_alphaflow.errors import ArgumentError
+
 
 config = get_default_settings()
 
@@ -30,6 +32,17 @@ LOG = logging.getLogger()
     help="Input: CSV file containing list of ids to convert from CIF to DSSP",
 )
 @click.option(
+    "--id_type",
+    type=click.Choice([ID_TYPE_AF_DOMAIN, ID_TYPE_UNIPROT_DOMAIN]),
+    default=ID_TYPE_AF_DOMAIN,
+    help=f"Option: specify the type of ID to specify the chopping [{ID_TYPE_AF_DOMAIN}]",
+)
+@click.option(
+    "--af_version",
+    type=int,
+    help=f"Option: specify the AF version when parsing uniprot ids",
+)
+@click.option(
     "--cif_suffix",
     type=str,
     default=DEFAULT_CIF_SUFFIX,
@@ -47,13 +60,26 @@ LOG = logging.getLogger()
     required=True,
     help="Output: DSSP Output Folder",
 )
-def convert_cif_to_dssp(cif_dir, id_file, cif_suffix, dssp_suffix, dssp_out_dir):
+def convert_cif_to_dssp(cif_in_dir, id_file, id_type,af_version, cif_suffix, dssp_suffix, dssp_out_dir):
     "Converts CIF to DSSP files"
 
-    for file_stub in yield_first_col(id_file):
-        cif_path = Path(cif_dir) / file_stub + cif_suffix
-        dssp_path = Path(dssp_out_dir) / file_stub + dssp_suffix
-        click.echo(f"Running DSSP: {cif_path} {dssp_path}")
+    for af_domain_id_str in yield_first_col(id_file):
+        if id_type == ID_TYPE_UNIPROT_DOMAIN:
+            af_domain_id = AFDomainID.from_uniprot_str(
+                af_domain_id_str, version=af_version
+            )
+        elif id_type == ID_TYPE_AF_DOMAIN:
+            af_domain_id = AFDomainID.from_str(af_domain_id_str)
+        else:
+            msg = f"failed to understand id_type '${id_type}'"
+            raise ArgumentError(msg)
+
+        file_stub = af_domain_id.af_chain_id
+        chopping = af_domain_id.chopping
+
+        cif_path = Path(cif_in_dir) / f"{file_stub}{cif_suffix}"
+        dssp_path = Path(dssp_out_dir) / (file_stub + dssp_suffix)
+        LOG.debug(f"Running DSSP: {cif_path} {dssp_path}")
         run_dssp(cif_path, dssp_path)
 
     click.echo("DONE")
@@ -71,16 +97,31 @@ def run_dssp(cif_path: Path, dssp_path: Path):
         LOG.error(msg)
         raise FileNotFoundError(msg)
 
-    subprocess.call(
+    args = [
+        DSSP_BINARY_PATH,
+    ]
+
+    if not DSSP_PDB_DICT is None:
+        args.extend(
+            [
+                "--mmcif-dictionary",
+                DSSP_PDB_DICT,
+            ]
+        )
+
+    args.extend(
         [
-            DSSP_BINARY_PATH,
-            "--mmcif-dictionary",
-            DSSP_PDB_DICT,
             "--output-format",
             "dssp",
             f"{cif_path}",
             f"{dssp_path}",
-        ],
+        ]
+    )
+
+    LOG.debug(f"Running: `{' '.join(args)}`")
+
+    subprocess.run(
+        args,
         stderr=subprocess.DEVNULL,
         check=True,
     )

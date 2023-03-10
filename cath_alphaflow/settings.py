@@ -1,7 +1,7 @@
 from pathlib import Path
 from prettyconf import config
 
-DEFAULT_AF_VERSION = 3
+DEFAULT_AF_VERSION = 4
 DEFAULT_AF_FRAGMENT = 1
 
 PROJECT_ROOT_DIR = Path(__file__).parent.parent
@@ -18,7 +18,7 @@ class Settings:
     ORACLE_DB_SID = config("ORACLE_DB_SID", default=None)
     ORACLE_DB_USERNAME = config("ORACLE_DB_USERNAME", default=None)
     ORACLE_DB_PASSWORD = config("ORACLE_DB_PASSWORD", default=None)
-    DSSP_BINARY_PATH = config("DSSP_BINARY_PATH", default=None)
+    DSSP_BINARY_PATH = config("DSSP_BINARY_PATH", default="mkdssp")
     DSSP_PDB_DICT = config("DSSP_PDB_DICT", default=None)
     FS_BINARY_PATH = config(
         "FS_BINARY_PATH",
@@ -27,6 +27,11 @@ class Settings:
     )
     FS_DB_PATH = config("FS_DB_PATH", default="foldseek_db", cast=resolve_path)
     FS_TMP_PATH = config("FS_TMP_PATH", default="foldseek_tmp", cast=resolve_path)
+
+    MONGO_USERNAME = config("MONGO_USERNAME", default=None)
+    MONGO_PASSWORD = config("MONGO_PASSWORD", default=None)
+    MONGO_HOST = config("MONGO_HOST", default=None)
+    MONGO_PORT = config("MONGO_PORT", default=27017)
 
     def to_dict(self):
         dict = {}

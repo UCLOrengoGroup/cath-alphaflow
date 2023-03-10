@@ -1,312 +1,152 @@
 # CATH AlphaFlow
 
-Workflow to annotate AlphaFold2 model structures with CATH domains.
+NextFlow workflow to annotate AlphaFold model structures with CATH domains.
 
-#### 1a. Global dataset (AF2 sequences)
+## Overview
 
-Name: CREATE_ALL_AF2_CHAIN_FASTA
+This project aims to create a pipeline that provides CATH structural domain annotations for protein models predicted by AlphaFold.
+The pipeline aims to take advantage of a modern workflow framework (Nextflow) to allow this process to be reusable, portable and scalable (e.g. parallel on HPC). The aim is to make these domain annotations externally available to the scientific community through a 3D-Beacons client.
 
-Input:
+## Useful Terms / Links
 
-- `PARAM:AF2_DOWNLOAD_URL` -- AlphaFold Download (gs://public-datasets-deepmind-alphafold/sequences.fasta)
+**Protein Domain** - proteins are often made of one or more protein domains, where each domain is defined as a globular, compact, semi-independently folding structural unit.
 
-Output:
+**CATH** - [CATH](https://www.cathdb.info) is a resource that "chops" domains from
+3D coordinates from experimental data (wwPDB) and assigns these structural domains into homologous
+superfamilies (i.e. domains that are related by evolution).
 
-- `FILE:ALL_AF2_CHAIN_FASTA`
+**AlphaFold** - [AlphaFold](https://alphafold.ebi.ac.uk/) is a protein structure prediction algorithm written by DeepMind that is capable of predicting protein 3D coordinates directly from amino acid sequence to a high degree of accuracy.
 
-#### 1b. Global dataset (Foldseek S95 library)
+**3D Beacons** - [3D Beacons](https://www.ebi.ac.uk/pdbe/pdbe-kb/3dbeacons/) is an open collaboration between providers of macromolecular structure models. This collaboration aims to provide model coordinates and meta-information from all the contributing data resources in a standardised data format, on a unified platform.
 
-Name: CREATE_DOMAIN_S95_PDB_DIR
+**NextFlow** - [NextFlow](https://www.nextflow.io/) enables scalable and reproducible scientific workflows using software containers. It allows the adaptation of pipelines written in the most common scripting languages.
 
-Input:
+**dssp** - [dssp](https://github.com/PDB-REDO/dssp) applies secondary structure to protein sequence. 
+Needs first installed: [libmcfp](https://github.com/mhekkel/libmcfp)
 
-- `FILE:DOMAIN_LIST_S95`
-- `DIRECTORY:CATH_PDB_DOMAINS` -- v4.3
-- `PARAM:S95_DIR` -- folder containing S95 PDB files
+**oracle** - Some datasources come optionally from an oracle database, for which there is access only within UCL. Instructions for UCL access to the database are [here](README.oracle.md)
 
-Output:
+## Project
 
-- `DIRECTORY:FOLDSEEK_S95_PDB_DB`
+The NextFlow workflows are kept here:
 
-Process:
+```
+workflows/
+```
 
-- `rsync --files-from <FILE:DOMAIN_LIST_S95> <DIRECTORY:CATH_PDB_DOMAINS> <DIRECTORY:FOLDSEEK_S95_PDB_DB>`
+Most of the non-trivial steps within the workflow are carried out via Python CLI commands, which can be found in:
 
-#### 1c. Global dataset (Foldseek S95 library)
+```
+cath_alphaflow/
+```
 
-Name: CREATE_FOLDSEEK_S95_LIBRARY
+Installing the Python dependencies in a virtual environment:
 
-Input:
+```
+python3 -m venv venv
+. venv/bin/activate
+pip install --upgrade pip wheel pytest
+pip install -e .
+```
 
-- `PARAM:S95_DIR` -- folder containing S95 PDB files
+Accessing the Python CLI tools
 
-Output:
+```
+. venv/bin/activate
+cath-af-cli
+```
 
-- `FILE:FOLDSEEK_S95_LIBRARY`
+Running the local tests
 
-Process:
+```
+pytest
+```
 
-- `foldseek createdb <s95_dir> <s95_db>`
+## Nextflow
+
+Install NextFlow (more details [here](https://www.nextflow.io/index.html#GetStarted))
+
+```bash
+curl -s https://get.nextflow.io | bash
+```
+
+It's also possible to install Nextflow via a python wrapper package, this automatically adds it to the path
+
+```bash
+pip install --upgrade nextflow
+```
+
+Run the basic workflow via:
+
+```bash
+./nextflow run -resume workflows/cath-test-workflow.nf
+```
 
 Notes:
 
-- currently in `/SAN/cath/cath_v4_3_0/databases/foldseek/cath_s95/`
+- the `-resume` flag instructs NextFlow to use cached data where possible
+- running this workflow will currently fail without the steps below
 
-#### 2a. Local dataset (UniProt IDs)
+One of the steps in the basic workflow tries to download files from Google Storage. This requires you to be logged into Google via the `gcloud` utility (more details [here](https://cloud.google.com/sdk/docs/install)).
 
-Name: CREATE_DATASET_UNIPROT_IDS
-
-Input:
-
-- `SOURCE:OracleDB` -- `GENE3D_21.CATH_DOMAIN_PREDICTIONS{_EXTRA}`
-- `FILTER` -- CONDITIONAL_EVALUE <= 1e-50, top 10k hits (ordered by increasing evalue)
-
-Output:
-
-- `FILE:CSV_UNIPROT_IDS` -- `UniProt_ID`
-
-#### 2b. Local dataset (CATH domains predictions)
-
-Name: CREATE_DATASET_CATH_FILES
-
-Input:
-
-- `SOURCE:OracleDB` -- `GENE3D_21.CATH_DOMAIN_PREDICTIONS{_EXTRA}`
-- `FILE:CSV_UNIPROT_IDS` -- `(UniProt_ID)`
-
-Output:
-
-- `FILE:CSV_UNIPROT_MD5` -- `(UniProt_ID, md5)`
-- `FILE:CRH_OUTPUT` -- `(md5, CATH_domain_ID, bitscore, boundaries, resolved_boundaries)`
-- `FILE:AF2_DOMAIN_LIST` -- `(AF_domain_ID_orig)`
-- `FILE:AF2_CHAIN_LIST` -- `(AF_chain_ID)`
-- `FILE:AF2_CATH_ORIG_ANNOTATIONS` -- `(AF_domain_ID_orig, CATH_domain_ID, UniProt_ID, md5, bitscore, resolved_boundaries, sfam_id, class_id)`
-
-#### 2c. Local dataset (AF2 Structure)
-
-Name: CREATE_DATASET_AF2_FILES
-
-Input:
-
-- `FILE:CSV_UNIPROT_MD5`
-- `SOURCE:HPC_ENVIRONMENT` -- Google Cloud Storage (GCS), Computer Science (CS)
-- `FILE:AF2_CHAIN_LIST`
-
-Output:
-
-- `FILE:ALL_CHAIN_FASTA` -- one FASTA file containing all AF2 chains
-- `DIRECTORY:AF2_CHAIN_MMCIF` -- one mmCIF file per AF2 chain
-
-Process:
-
-- `GCS` -- `cat [manifest file] | gsutil -m cp -I . `
-- `CS` -- (local): symlinking (check if it exists)
-
-#### 3a. Run SETH (Chain sequence)
-
-Name: CREATE_ANNOTATION_CHAIN_DISORDER
-
-Input:
-
-- `FILE:ALL_CHAIN_FASTA`
-
-Output:
-
-- `FILE:SETH_CHAIN_OUTPUT_FILE` -- Per-residue SETH scores (disordered 0 -> 1 ordered)
-
-Process:
-
-- `SETH_1.py -i <your input fasta file name> -o <the desired name of your output file>`
-
-#### 3b. Filter (Disordered Chain)
-
-Name: FILTER_DOMAINLIST_BY_CHAIN_DISORDER
-
-Input:
-
-- `FILE:SETH_CHAIN_OUTPUT_FILE`
-- `FILTER` -- `(SETH_GLOBAL_CHAIN_DISORDER, SETH_LOCAL_DOMAIN_DISORDER)`
-- `FILE:AF2_DOMAIN_LIST`
-
-Output:
-
-- `FILE:AF2_DOMAIN_LIST`
-- `FILE:SETH_GLOBAL_CHAIN_DISORDER` -- `(AF_domain_ID_orig, seth_global_disorder_score)`
-
-Process:
-
-- `python filter_disorder.py`
-
-#### 4. Optimize domain boundaries (chop tails)
-
-Name: OPTIMISE_DOMAIN_BOUNDARIES
-
-Input:
-
-- `FILE:AF2_CATH_ORIG_ANNOTATIONS`
-- `FILE:AF2_CHAIN_MMCIF`
-- `FILE:AF2_DOMAIN_LIST`
-
-Output:
-
-- `FILE:AF2_DOMAIN_LIST_POST_TAILCHOP` -- `(AF_domain_ID_tailchop)`
-- `FILE:AF2_DOMAIN_MAPPING_POST_TAILCHOP` -- `(AF_domain_ID_orig, AF_domain_ID_tailchop)`
-
-Process:
-
-- `python optimize_boundaries.py`
-
-#### 5a. Run SETH (Domain sequence)
-
-Name: CREATE_ANNOTATION_DOMAIN_DISORDER
-
-Input:
-
-- `FILE:ALL_CHAIN_FASTA`
-- `FILE:AF2_DOMAIN_LIST_POST_TAILCHOP`
-
-Output:
-
-- `FILE:SETH_DOMAIN_OUTPUT_FILE` -- Per-residue SETH scores (disordered 0 -> 1 ordered)
-
-Process:
-
-- `SETH_1.py -i <your input fasta file name> -o <the desired name of your output file>`
-
-#### 5b. Filter (Disordered Domain)
-
-Name: FILTER_DOMAINLIST_BY_DISORDER
-
-Input:
-
-- `FILE:SETH_DOMAIN_OUTPUT_FILE`
-- `FILTER` -- `(SETH_GLOBAL_CHAIN_DISORDER, SETH_LOCAL_DOMAIN_DISORDER)`
-- `FILE:AF2_DOMAIN_LIST_POST_TAILCHOP`
-
-Output:
-
-- `FILE:AF2_DOMAIN_LIST_POST_DOMAIN_DISORDER`
-- `FILE:AF2_SETH_ANNOTATIONS` -- `(AF_domain_ID_tailchop, seth_global_disorder_score)`
-
-Process:
-
-- `python filter_disorder.py`
-
-#### 6. Filter: AF2 Quality (pLDDT, LUR)
-
-Name: FILTER_DOMAINLIST_BY_AF2_QUALITY
-
-Input:
-
-- `FILE:AF2_CHAIN_MMCIF`
-- `FILE:AF2_DOMAIN_LIST_POST_DOMAIN_DISORDER`
-
-Output:
-
-- `FILE:AF2_DOMAIN_LIST_POST_AF_QUALITY`
-- `FILE:AF2_QUALITY_ANNOTATIONS` -- `(AF_domain_ID_tailchop, PLDDT_average, LUR_score)`
-
-Process:
-
-- `python filter_af2_quality.py`
-
-#### 7. Filter: AF2 Packing (packing, Surf/Vol)
-
-Name: FILTER_DOMAINLIST_BY_AF2_PACKING
-
-Input:
-
-- `FILE:AF2_CHAIN_MMCIF`
-- `FILE:AF2_DOMAIN_LIST_POST_AF_QUALITY`
-
-Output:
-
-- `FILE:AF2_DOMAIN_LIST_POST_AF_PACKING`
-- `FILE:AF2_PACKING_ANNOTATIONS` -- `(AF_domain_ID_tailchop, packing_score, surf_vol_score)`
-
-Process:
-
-- `python filter_af2_packing.py`
-
-#### 8. Filter: SSE (DSSP+secmake)
-
-Name: FILTER_DOMAINLIST_BY_SSE
-
-Input:
-
-- `FILE:AF2_CHAIN_MMCIF`
-- `FILE:AF2_DOMAIN_LIST_POST_AF_PACKING`
-
-Output:
-
-- `FILE:AF2_DOMAIN_LIST_POST_SSE`
-- `FILE:AF2_SSE_ANNOTATIONS` -- `(AF_domain_ID_tailchop, sse_number)`
-
-Process:
-
-- `python3 filter_sse.py`
-
-#### 9. Run Chopping
-
-Name: CHOP_AF2_DOMAINS
-
-Input:
-
-- `FILE:AF2_DOMAIN_LIST_POST_SSE` -- `af_<Uniprot_ID>/<start>-<stop>`
-- `DIRECTORY:AF2_CHAIN_MMCIF`
-
-Output:
-
-- `DIRECTORY:AF2_DOMAIN_MMCIF`
-- `FILE:AF2_DOMAIN_MAPPING_POST_CHOPPING` -- `(AF_domain_ID_tailchop, AF_domain_ID_chopped)`
-
-Process:
-
-```
-submit.sh
-/home/ucbcisi/work/2022_06_29.alphafold_rechop_corrected_domains/submit.sh
+```bash
+gcloud auth application-default login
 ```
 
-#### 10. Foldseek S95
+Now running the workflow should run successfully...
 
-Name: CREATE_ANNOTATION_FOLDSEEK_S95
-
-Input:
-
-- `FILE:FOLDSEEK_S95_DB`
-- `FILE:AF2_DOMAIN_LIST_POST_SSE`
-- `DIRECTORY:AF2_DOMAIN_MMCIF`
-
-Output:
-
-- `FILE:AF2_FOLDSEEK_ANNOTATIONS` -- `(AF_domain_ID_tailchop, foldseek_bitscore, foldseek_overlap)`
-
-Process:
+```bash
+$ ./nextflow run -resume workflows/cath-test-workflow.nf
+N E X T F L O W ~ version 22.10.3
+Launching `workflows/cath-test-workflow.nf` [maniac_bhabha] DSL2 - revision: 21b594e11a
+executor > local (48)
+[21/0dcefb] process > uniprot_domain_to_uniprot (51) [100%] 51 of 51, cached: 51 ✔
+[4c/3b022d] process > create_af_manifest_file (31) [100%] 51 of 51, cached: 51 ✔
+[da/f74788] process > retrieve_af_chain_cif_files (47) [100%] 51 of 51, cached: 49 ✔
+[40/074465] process > chop_cif (42) [100%] 46 of 46 ✔
+Completed at: 17-Jan-2023 15:25:49
+Duration : 1m 8s
+CPU hours : 0.3 (32.1% cached)
+Succeeded : 48
+Cached : 151
 
 ```
-foldseek createdb AF2_DOMAIN_MMCIF AF2_DOMAIN_MMCIF_DB
-foldseek search AF2_DOMAIN_MMCIF_DB FOLDSEEK_S95_DB
-foldseek convertalis AF2_DOMAIN_MMCIF_DB FOLDSEEK_S95_DB
+
+## Configuring for your execution environment
+
+The platform folder contains subfolders for each execution environment the pipeline has been tested with so far. You can create a new subfolder and copy and customise the files found in one of the existing subfolders. Each subfolder contains:
+
+- an `include` file which sets environment variables
+- an `install` script which performs one-off package and dependency installation
+- a `source` script which should to sourced immediately prior to launching the pipeline
+- a `nextflow.config` file containing overrides to the base nextflow.config
+
+To run nextflow using a custom configuration use the following from the toplevel folder of the repository, ie the folder containing the base nextflow.config, such that it will be automatically picked up but selectively overridden by the explicitly specified platform specific config:
+
+```
+nextflow run -resume -c ./platforms/<your_platform>/nextflow.config ./workflows/cath-test-workflow.nf
 ```
 
-#### 11. Create Table
+You would typically run this from an HPC login node.
 
-Name: CREATE_RESULTS_TABLE
+---
 
-Input:
+## Tracing and visualising timelines of the pipeline
+https://www.nextflow.io/docs/latest/tracing.html
 
-- `FILE:AF2_DOMAIN_LIST_POST_SSE`
-- `FILE:AF2_SETH_ANNOTATIONS`
-- `FILE:AF2_QUALITY_ANNOTATIONS`
-- `FILE:AF2_PACKING_ANNOTATIONS`
-- `FILE:AF2_CATH_ORIG_ANNOTATIONS`
-- `FILE:AF2_SSE_ANNOTATIONS`
-- `FILE:AF2_FOLDSEEK_ANNOTATIONS`
-
-Output:
-
-- `FILE:CATH_AF2_TABLE`
-
-Process:
-
-- `python collate_data_to_table.py`
+The production of a pipeline image needs the installation of graphviz
+```
+sudo apt install graphviz
+```
+Call nextflow with -with-dag, e.g.
+```
+./nextflow run workflows/cath-test-workflow.nf -with-dag cath-test-workflow.png
+```
+An html report that shows the process timings, gantt chart style
+```
+./nextflow run workflows/cath-test-workflow.nf -with-timeline cath-test-workflow-gantt.html
+```
+An html html report with plotly summaries of processes: 
+```
+./nextflow run workflows/cath-test-workflow.nf -with-report cath-test-workflow-plots.html
+```

@@ -1,7 +1,7 @@
 import pytest
 
 from cath_alphaflow.errors import ParseError
-from cath_alphaflow.models import Segment, Chopping, AFChainID, AFDomainID
+from cath_alphaflow.models.domains import Segment, Chopping, AFChainID, AFDomainID
 
 
 def test_af_ids():
@@ -75,3 +75,20 @@ def test_af_domain_parser():
     for bad_id in bad_ids:
         with pytest.raises(ParseError):
             AFDomainID.from_str(bad_id)
+
+
+def test_af_domain_from_uniprot():
+
+    expected_domain_id = AFDomainID(
+        uniprot_acc="P00520",
+        fragment_number=1,
+        version=4,
+        chopping=Chopping(
+            segments=[Segment(start=12, end=23), Segment(start=34, end=45)]
+        ),
+    )
+
+    assert (
+        AFDomainID.from_uniprot_str("P00520/12-23_34-45", fragment_number=1, version=4)
+        == expected_domain_id
+    )

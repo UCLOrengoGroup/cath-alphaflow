@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#script to setup environment ready to use each time
+#usage example: cath-alphaflow$ source ./platforms/rjv_local_vm/source
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+source ${SCRIPT_DIR}/include
+. ${CATH_VENV_PATH}/bin/activate
+
+#login to gcloud, generates interactive prompt and tries to launch browser
+gcloud auth login ${CATH_GCLOUD_USER}
+
+#or should it be:
+#  gcloud auth application-default login ?
+
+#NB to revoke permissions:
+#  gcloud auth revoke ${CATH_GLOUD_USER}
+# or
+#  gcloud auth revoke --all
