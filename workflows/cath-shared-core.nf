@@ -99,8 +99,11 @@ process uniprot_domain_to_uniprot {
     output:
     path 'uniprot_ids.txt'
 
+    // hardcoding the optional file header for now as "uniprot_domain_id" (case sensitive)
+    // anything other than an exact match is  silently ingested as a invalid id
+
     """
-    cat ${uniprot_domain_id} | tr '/' ' ' | awk '{print \$1}' | sort | uniq  > uniprot_ids.txt
+    cat ${uniprot_domain_id} | grep -v '^uniprot_domain_id' | tr '/' ' ' | awk '{print \$1}' | sort | uniq  > uniprot_ids.txt
     """
 }
 
