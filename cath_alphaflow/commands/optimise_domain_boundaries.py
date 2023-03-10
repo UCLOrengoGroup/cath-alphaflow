@@ -10,6 +10,8 @@ from cath_alphaflow.io_utils import get_af_domain_id_reader
 from cath_alphaflow.io_utils import get_csv_dictwriter
 from cath_alphaflow.models.domains import AFDomainID, Segment, Chopping
 from cath_alphaflow.errors import NoMatchingResiduesError
+from cath_alphaflow.io_utils import get_status_log_dictwriter
+from cath_alphaflow.constants import STATUS_LOG_SUCCESS,STATUS_LOG_FAIL
 
 LOG = logging.getLogger()
 
@@ -42,6 +44,12 @@ LOG = logging.getLogger()
     help="Output: CSV file for AF2 domain list after chopping",
 )
 @click.option(
+    "--gzipped_af_chains",
+    type=bool,
+    default=False,
+    help="Set True if AF-chain files are stored in .gz files"
+)
+@click.option(
     "--af_domain_mapping_post_tailchop",
     type=click.File("wt"),
     required=True,
@@ -54,12 +62,21 @@ LOG = logging.getLogger()
     default=70,
     help="pLDDT cut-off score to apply to the domains. If not given, a cut-off score of 70 will be applied",
 )
+@click.option(
+    "--status_log",
+    "status_log_file",
+    type=click.File("wt"),
+    required=True,
+    help="Log file recording if domains have been optimised or reason for skipping"
+)
 def optimise_domain_boundaries(
     af_domain_list,
     af_chain_mmcif_dir,
     af_domain_list_post_tailchop,
     af_domain_mapping_post_tailchop,
     cutoff_plddt_score,
+    gzipped_af_chains,
+    status_log_file,
 ):
     "Adjusts the domain boundaries of AF2 by removing unpacked tails"
 
@@ -76,17 +93,32 @@ def optimise_domain_boundaries(
     )
     af_mapping_list_post_tailchop_writer.writeheader()
 
+    status_log = get_status_log_dictwriter(status_log_file)
+
     click.echo(
         f"Chopping tails from AF domains"
         f"(mmcif_dir={af_chain_mmcif_dir}, in_file={af_domain_list.name}, "
         f"out_file={af_domain_list_post_tailchop.name} ) ..."
     )
     for af_domain_id in af_domain_list_reader:
-        click.echo(f"Working on: {af_domain_id} ...")
-
-        af_domain_id_post_tailchop = calculate_domain_id_post_tailchop(
-            af_domain_id, af_chain_mmcif_dir, cutoff_plddt_score
-        )
+        LOG.debug(f"Working on: {af_domain_id} ...")
+        af_domain_id_post_tailchop = None
+        try:
+            af_domain_id_post_tailchop = calculate_domain_id_post_tailchop(
+                af_domain_id, af_chain_mmcif_dir, cutoff_plddt_score, gzipped_af_chains
+            )
+            
+            if af_domain_id == af_domain_id_post_tailchop:
+                description = f"boundaries unchanged"
+            else:
+                description = f"adjusted boundaries from {af_domain_id} to {af_domain_id_post_tailchop}"
+            write_status_log(status_log, af_domain_id, STATUS_LOG_SUCCESS, None, description)
+            
+        except NoMatchingResiduesError:
+            description = 'boundaries not adjusted due to low pLDDT'
+            af_domain_id_post_tailchop = af_domain_id
+            write_status_log(status_log,af_domain_id,STATUS_LOG_SUCCESS,None,description)
+            
 
         af_domain_list_post_tailchop_writer.writerow(
             {"af_domain_id": af_domain_id_post_tailchop}
@@ -123,12 +155,11 @@ def cut_segment(
 
     new_boundary_lower_value = boundary_lower_value = segment_to_cut.start
     new_boundary_higher_value = boundary_higher_value = segment_to_cut.end
-
+    
     exception_info = (
         f"(structure: {structure}, start:{boundary_lower_value}"
         f", end:{boundary_higher_value}, cutoff:{cutoff_plddt_score})"
     )
-
     if cut_start:
         for res in range(boundary_lower_value, boundary_higher_value):
             local_plddt = get_local_plddt_for_res(structure, res)
@@ -159,7 +190,7 @@ def cut_segment(
         raise NoMatchingResiduesError(msg)
 
     new_segment = Segment(
-        start=str(new_boundary_lower_value), end=str(new_boundary_higher_value)
+        start=new_boundary_lower_value, end=new_boundary_higher_value
     )
 
     return new_segment
@@ -235,6 +266,7 @@ def calculate_domain_id_post_tailchop(
     af_domain_id: AFDomainID,
     af_chain_mmcif_dir: Path,
     cutoff_plddt_score: int,
+    gzipped_af_chains: bool,
     *,
     cif_filename=None,
 ) -> AFDomainID:
@@ -243,16 +275,21 @@ def calculate_domain_id_post_tailchop(
 
     # create default filename
     if cif_filename is None:
-        cif_filename = af_domain_id.af_chain_id + ".cif.gz"
+        if gzipped_af_chains == False:
+            open_func = open
+            cif_filename = af_domain_id.af_chain_id + ".cif"
+        else:
+            open_func = gzip.open
+            cif_filename = af_domain_id.af_chain_id + ".cif.gz"
 
     cif_path = Path(af_chain_mmcif_dir, cif_filename)
 
     # var to store the new segments (whether from single or multi-segment domains)
     new_segments = None
 
-    with gzip.open(f"{cif_path}", mode="rt") as cif_fh:
+    with open_func(f"{cif_path}", mode="rt") as cif_fh:
 
-        structure = MMCIFParser(QUIET=1).get_structure("struc", cif_fh)
+        structure = MMCIFParser(QUIET=1).get_structure(f"{cif_filename}", cif_fh)
 
         if len(old_chopping.segments) == 1:
             # For single region domains just cut the one region
@@ -284,3 +321,14 @@ def calculate_domain_id_post_tailchop(
     af_domain_id_post_tailchop.chopping = Chopping(segments=new_segments)
 
     return af_domain_id_post_tailchop
+
+def write_status_log(status_log, entry_id, status, error, description):
+    status_log.writerow(
+                {
+                "entry_id": entry_id,
+                "status": status,
+                "error": error,
+                "description": description,
+                }
+            )
+                

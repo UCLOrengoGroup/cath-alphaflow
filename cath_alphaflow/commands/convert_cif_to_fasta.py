@@ -50,8 +50,8 @@ def convert_cif_to_fasta(
 
     for file_stub in yield_first_col(id_file):
         cif_path = Path(cif_in_dir) / (file_stub + cif_suffix)
-        header, sequence = cif_to_fasta(cif_path, fasta_out_dir)
-        write_fasta_file(header=header, sequence=sequence, fasta_out_dir=fasta_out_dir)
+        header, sequence = cif_to_fasta(cif_path)
+        write_fasta_file(header=header, sequence=sequence, fasta_out_file=f'{fasta_out_dir}/{header}.fasta')
     combine_fasta_files(fasta_in_dir=fasta_out_dir, fasta_out_file=combined_fasta_file)
 
     click.echo("DONE")
