@@ -143,7 +143,7 @@ def convert_cif_to_foldseek_db(
                 if os.path.islink(dir_path):
                     os.remove(dir_path)
             if not fs_querydb.exists():
-                msg = f"failed to create expected foldseek database file: {fs_querydb_db_path}"
+                msg = f"failed to create expected foldseek database file: {fs_querydb_path}"
                 raise FileNotFoundError(msg)
         os.rmdir(af_tmp_dir)
 
