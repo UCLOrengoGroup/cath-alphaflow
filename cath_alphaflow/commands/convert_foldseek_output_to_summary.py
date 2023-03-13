@@ -8,7 +8,7 @@ from cath_alphaflow.io_utils import (
 )
 from cath_alphaflow.settings import get_default_settings
 from cath_alphaflow.constants import DEFAULT_FS_BITS_CUTOFF, DEFAULT_FS_OVERLAP
-from cath_alphaflow.models import FoldseekSummary
+from cath_alphaflow.models.domains import FoldseekSummary
 
 config = get_default_settings()
 
