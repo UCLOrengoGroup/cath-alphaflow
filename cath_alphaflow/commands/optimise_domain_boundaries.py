@@ -266,7 +266,7 @@ def calculate_domain_id_post_tailchop(
     af_domain_id: AFDomainID,
     af_chain_mmcif_dir: Path,
     cutoff_plddt_score: int,
-    gzipped_af_chains: bool,
+    gzipped_af_chains: bool = True,
     *,
     cif_filename=None,
 ) -> AFDomainID:
