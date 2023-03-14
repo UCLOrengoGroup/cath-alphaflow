@@ -16,6 +16,8 @@ include { create_missing_uniprot_domain_ids } from './cath-shared-core'
 include { AF_CIF_FILES } from './cath-module-core'
 include { CHOP_CIF } from './cath-module-core'
 include { OUTPUT_UNIPROT } from './cath-module-core'
+include { AF_ANNOTATE_DOMAINS_CIF } from './cath-module-kinfams'
+
 
 // Params defined after include are used locally
 params.dataset_dir = "$workflow.launchDir/tests/fixtures/${params.dataset_name}"
@@ -27,8 +29,10 @@ workflow {
     def all_uniprot_domain_ids_ch = Channel.fromPath(uniprot_domain_ids_path, checkIfExists: true)
                     
     def all_cif_files = AF_CIF_FILES(all_uniprot_domain_ids_ch)
-    
+                
     CHOP_CIF(all_cif_files,uniprot_domain_ids_path)
     
     OUTPUT_UNIPROT(all_cif_files,all_uniprot_domain_ids_ch)
+
+    AF_ANNOTATE_DOMAINS_CIF()
 }
