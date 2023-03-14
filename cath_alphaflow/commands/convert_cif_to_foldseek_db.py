@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 import os
 import click
+import shutil
 import subprocess
 from cath_alphaflow.io_utils import yield_first_col
 from cath_alphaflow.models.domains import AFDomainID
@@ -12,7 +13,8 @@ from cath_alphaflow.constants import (
     ID_TYPE_AF_DOMAIN,
     ID_TYPE_UNIPROT_DOMAIN,
 )
-from cath_alphaflow.settings import get_default_settings
+from tempfile import TemporaryDirectory
+from cath_alphaflow.settings import get_default_settings,DEFAULT_AF_VERSION
 from cath_alphaflow.errors import ArgumentError
 
 config = get_default_settings()
@@ -58,7 +60,7 @@ LOG = logging.getLogger()
     "--id_type",
     type=click.Choice([ID_TYPE_AF_DOMAIN, ID_TYPE_UNIPROT_DOMAIN]),
     default=ID_TYPE_AF_DOMAIN,
-    help=f"Option: specify the type of ID to specify the chopping [{ID_TYPE_AF_DOMAIN}]",
+    help=f"Option: specify the type of ID in id_file [{ID_TYPE_AF_DOMAIN}]",
 )
 @click.option(
     "--fs_querydb_dir",
@@ -75,8 +77,8 @@ LOG = logging.getLogger()
 @click.option(
     "--af_version",
     type=int,
-    default=4,
-    help=f"Option: specify the AF version when parsing uniprot ids",
+    default=DEFAULT_AF_VERSION,
+    help=f"Option: specify the AF version when parsing uniprot ids. (default: {DEFAULT_AF_VERSION}",
 )
 def convert_cif_to_foldseek_db(
     cif_dir, fs_querydb_dir, fs_querydb_name, id_file, id_type, cif_suffix, fs_querydb_suffix, fs_bin_path, af_version
@@ -91,10 +93,9 @@ def convert_cif_to_foldseek_db(
     if not fs_querydb_path.exists():
         os.makedirs(fs_querydb_path)
     
+    af_tmp_dir = None
     if id_file is not None:
-        af_tmp_dir = 'af_tmp_dir'
-        if Path(af_tmp_dir).is_dir==False:
-            os.mkdir(af_tmp_dir)
+        af_tmp_dir = TemporaryDirectory(prefix='af_fs_tmp_dir_')
         for af_domain_id_str in yield_first_col(id_file):
             if id_type == ID_TYPE_UNIPROT_DOMAIN:
                 af_domain_id = AFDomainID.from_uniprot_str(
@@ -113,10 +114,10 @@ def convert_cif_to_foldseek_db(
                 LOG.error(msg)
                 raise FileNotFoundError(msg)
             # Create symlinks to querydb_dir
-            dest_cif_path = Path(af_tmp_dir) / cif_path.name
+            dest_cif_path = Path(af_tmp_dir.name) / cif_path.name
             if not dest_cif_path.exists():
                 os.symlink(str(cif_path), str(dest_cif_path))
-        cif_input_dir = af_tmp_dir
+        cif_input_dir = af_tmp_dir.name
         fs_querydb = Path(f"{fs_querydb_dir}/{fs_querydb_name}{fs_querydb_suffix}")
     else:
         cif_input_dir = cif_dir
@@ -132,20 +133,5 @@ def convert_cif_to_foldseek_db(
         stderr=subprocess.DEVNULL,
         check=True,
     )
-    if id_file is not None:
-        for root, dirs, files in os.walk(af_tmp_dir, topdown=False):
-            for name in files:
-                file_path = os.path.join(root, name)
-                if os.path.islink(file_path):
-                    os.remove(file_path)
-            for name in dirs:
-                dir_path = os.path.join(root, name)
-                if os.path.islink(dir_path):
-                    os.remove(dir_path)
-            if not fs_querydb.exists():
-                msg = f"failed to create expected foldseek database file: {fs_querydb_path}"
-                raise FileNotFoundError(msg)
-        os.rmdir(af_tmp_dir)
-
     click.echo("DONE")
     return
