@@ -20,7 +20,7 @@ include { chop_cif } from './cath-shared-core'
 include { cif_paths_to_uniprot_accessions } from './cath-shared-core'
 include { create_missing_uniprot_domain_ids } from './cath-shared-core'
 
-///////// SUBMODULE WORKFLOWS /////////////////////////////////
+// ********** WORKFLOWS ********** //
 workflow AF_CIF_FILES {
 
     take:
