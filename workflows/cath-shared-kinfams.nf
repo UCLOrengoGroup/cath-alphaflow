@@ -43,31 +43,6 @@ process uniprot_csv_from_af_domains {
     """
 }
 
-process create_dataset_cath_files {
-    publishDir params.publish_dir, mode: 'copy'
-
-    input:
-    path 'uniprot_ids_csv'
-
-    output:
-    path params.uniprot_md5_csv_fn
-    path params.gene3d_crh_output_fn
-    path params.af_domainlist_ids_csv_fn
-    path params.af_chainlist_ids_csv_fn
-    path params.af_cath_orig_annotations_csv_fn
-
-    """
-    cath-af-cli create-dataset-cath-files \
-        --csv_uniprot_ids uniprot_ids_csv \
-        --csv_uniprot_md5 ${params.uniprot_md5_csv_fn} \
-        --gene3d_crh_output ${params.gene3d_crh_output_fn} \
-        --af_domainlist_ids ${params.af_domainlist_ids_csv_fn} \
-        --af_chainlist_ids ${params.af_chainlist_ids_csv_fn} \
-        --af_cath_annotations ${params.af_cath_orig_annotations_csv_fn} \
-        --dbname ${params.cath_odb_name} \
-    """
-}
-
 process create_dssp {
     publishDir params.publish_dir, mode: 'copy'
 

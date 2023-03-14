@@ -72,7 +72,8 @@ to avoid typing the long ssh command each time:
 alias ssh-odb='ssh -N -L 1521:dbname.xx.xx.ac.uk:1521 gatename'
 ```
 the -N tells ssh not to open the interactive session to gatename, but it still sets up the tunnel itself
-now just use:
+
+#### Once it is all set each time just
 ```
 $ ssh-odb
 and use CTRL-C to terminate the tunnel
