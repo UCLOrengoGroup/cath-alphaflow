@@ -240,6 +240,12 @@ class AFDomainID(AFChainID):
             raise ParseError(msg)
 
         return domid
+    
+    @classmethod
+    def from_foldseek_query(cls, raw_query_id: str):
+        if raw_query_id.endswith(".cif"):
+            raw_query_id = raw_query_id.replace('.cif','')
+        return cls.from_str(raw_query_id)
 
     @property
     def af_domain_id(self):
