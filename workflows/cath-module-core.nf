@@ -67,8 +67,22 @@ workflow OUTPUT_UNIPROT {
         def undownloaded_uniprot_domain_ids_ch = create_missing_uniprot_domain_ids(
             downloaded_uniprot_ids_ch,
             uniprot_domain_ids_ch
-        )
+        )        
+}
 
+workflow GATHER_CIF {
+    
+    take:
+        uniprot_domain_ids_path
+    
+    main:        
+        def all_uniprot_domain_ids_ch = Channel.fromPath(uniprot_domain_ids_path, checkIfExists: true)
+                        
+        def all_cif_files = AF_CIF_FILES(all_uniprot_domain_ids_ch)
+                    
+        CHOP_CIF(all_cif_files,uniprot_domain_ids_path)
+        
+        OUTPUT_UNIPROT(all_cif_files,all_uniprot_domain_ids_ch)
         
 }
 

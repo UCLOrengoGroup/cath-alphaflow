@@ -21,7 +21,6 @@ params.cath_odb_name = 'GENE3D_21'
 include { af_domain_ids_from_cif_dir } from './cath-shared-kinfams'
 include { ids_from_cif_dir } from './cath-shared-kinfams'
 include { uniprot_csv_from_af_domains } from './cath-shared-kinfams'
-include { create_dataset_cath_files } from './cath-shared-kinfams'
 include { create_dssp } from './cath-shared-kinfams'
 include { create_plddt_summary } from './cath-shared-kinfams'
 include { create_sse_summary } from './cath-shared-kinfams'
@@ -29,35 +28,27 @@ include { create_sse_summary } from './cath-shared-kinfams'
 
 // ********** WORKFLOWS ********** //
 
+workflow AF_ANNOTATE_DOMAINS_CIF {        
+    main:
+        def cif_chopped_dir = file("${params.publish_dir}/${params.af_cif_chopped_dir}")
+        def cif_raw_dir = file("${params.publish_dir}/${params.af_cif_raw_dir}")
+        def dssp_raw_dir = file("${params.publish_dir}/${params.af_dssp_raw_dir}")
+        def plddt_file = file("${params.publish_dir}/${params.plddt_stats_fn}")
 
+        def af_domain_ids_ch = af_domain_ids_from_cif_dir(cif_chopped_dir)
 
-workflow AF_ANNOTATE_DOMAINS_CIF {
+        def af_domain_ids_chunked_ch = af_domain_ids_ch.splitText(by: 100, file: true)
 
-    def cif_chopped_dir = file("${params.publish_dir}/${params.af_cif_chopped_dir}")
-    def cif_raw_dir = file("${params.publish_dir}/${params.af_cif_raw_dir}")
-    def dssp_raw_dir = file("${params.publish_dir}/${params.af_dssp_raw_dir}")
-    def plddt_file = file("${params.publish_dir}/${params.plddt_stats_fn}")
-
-    def af_domain_ids_ch = af_domain_ids_from_cif_dir(cif_chopped_dir)
-
-    def af_domain_ids_chunked_ch = af_domain_ids_ch.splitText(by: 100, file: true)
-
-    def plddt_summary_ch = create_plddt_summary(af_domain_ids_chunked_ch, cif_raw_dir)
-    
-    plddt_summary_ch.collectFile(name: plddt_file)
-    
-    def cif_ids_ch = ids_from_cif_dir(cif_raw_dir).splitText(by: 100, file: true)
+        def plddt_summary_ch = create_plddt_summary(af_domain_ids_chunked_ch, cif_raw_dir)
         
-    def uniprot_csv_ch = uniprot_csv_from_af_domains(af_domain_ids_ch)
-
-    // This gets files from the oracle database
-    def uniprot_dataset = create_dataset_cath_files(uniprot_csv_ch)
+        plddt_summary_ch.collectFile(name: plddt_file)
+        
+        def cif_ids_ch = ids_from_cif_dir(cif_raw_dir).splitText(by: 100, file: true)
                     
-    //def dssp_files_ch = create_dssp(cif_ids_ch, cif_raw_dir, dssp_raw_dir)                
-    //dssp_files_ch.collect()
+        uniprot_csv_ch = uniprot_csv_from_af_domains(af_domain_ids_ch)
     
-    // what does this do? why do I get errors?
-    //create_sse_summary(af_domain_ids_ch, dssp_raw_dir)
-
+    emit:
+        uniprot_csv_ch
+    
 }
 
