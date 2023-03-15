@@ -29,42 +29,34 @@ RE_UNIPROT_DOMAIN_ID = re.compile(
 LOG = logging.getLogger(__name__)
 
 
-@dataclass
-class CrhBase:
+class CrhBase(BaseModel):
     """
     Defines the common interface for "original" and "decorated" CRH rows
     """
 
-    @property
-    def domain_id(self):
-        raise NotImplementedError
-
-    @property
-    def superfamily_id(self):
-        raise NotImplementedError
-
-    @property
-    def sequence_md5(self):
-        raise NotImplementedError
-
-    @property
-    def model_id(self):
-        raise NotImplementedError
-
-    @property
-    def bitscore(self):
-        raise NotImplementedError
-
-    @property
-    def chopping_raw(self):
-        raise NotImplementedError
-
-    @property
-    def chopping_final(self):
-        raise NotImplementedError
+    domain_id: str
+    superfamily_id: str
+    sequence_md5: str
+    model_id: str
+    bitscore: float
+    chopping_raw: str
+    chopping_final: str
 
 
-class Gene3DCrh(CrhBase):
+class CrhProvider(BaseModel):
+    def to_crh(self):
+        return CrhBase(
+            domain_id=self.domain_id,
+            superfamily_id=self.superfamily_id,
+            sequence_md5=self.sequence_md5,
+            model_id=self.model_id,
+            bitscore=self.bitscore,
+            chopping_raw=self.chopping_raw,
+            chopping_final=self.chopping_final,
+        )
+
+
+class Gene3DCrh(CrhProvider):
     """
     Holds data corresponding to an entry from a Gene3D CRH file
     """
@@ -79,9 +71,7 @@ class Gene3DCrh(CrhBase):
 
     @property
     def domain_id(self):
-        if not hasattr(self, "_domain_id"):
-            self._domain_id = self.domain_sfam_id.split("__")[0]
-        return self._domain_id
+        return self.domain_sfam_id.split("__")[0]
 
     @property
     def model_id(self):
@@ -89,12 +79,10 @@ class Gene3DCrh(CrhBase):
 
     @property
     def superfamily_id(self):
-        if not hasattr(self, "_superfamily_id"):
-            self._superfamily_id = self.domain_sfam_id.split("__")[1].split("/")[0]
-        return self._superfamily_id
+        return self.domain_sfam_id.split("__")[1].split("/")[0]
 
 
-class DecoratedCrh(CrhBase):
+class DecoratedCrh(CrhProvider):
     """
     Holds data corresponding to an entry in a 'Decorated' CATH Resolve Hits file
     """
@@ -112,8 +100,7 @@ class DecoratedCrh(CrhBase):
     reg_ostats: str
 
 
-@dataclass
-class PredictedCathDomain:
+class PredictedCathDomain(BaseModel):
     """
     Holds data on a PredictedCathDomain (from Gene3D)
     """
