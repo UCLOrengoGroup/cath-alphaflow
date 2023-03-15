@@ -3,14 +3,13 @@ import logging
 from pathlib import Path
 import gzip
 import numpy as np
-
 import click
 
 
 from cath_alphaflow.io_utils import get_af_domain_id_reader
 from cath_alphaflow.io_utils import get_csv_dictwriter
-from cath_alphaflow.models import AFDomainID, Segment, Chopping
-from cath_alphaflow.errors import NoMatchingResiduesError
+from cath_alphaflow.models.domains import AFDomainID
+from cath_alphaflow.constants import DEFAULT_GLOB_DISTANCE, DEFAULT_GLOB_VOLUME
 
 LOG = logging.getLogger()
 
@@ -37,47 +36,42 @@ LOG = logging.getLogger()
     help="Input: directory of mmCIF files",
 )
 @click.option(
+    "--gzipped_af_chains",
+    type=bool,
+    default=False,
+    help="Set True if AF-chain files are stored in .gz files"
+)
+@click.option(
     "--af_domain_globularity",
     type=click.File("wt"),
     required=True,
     help="Output: CSV file for AF2 domain list including both globularity parameters",
 )
-# @click.option(
-#     "--af_domain_mapping_post_tailchop",
-#     type=click.File("wt"),
-#     required=True,
-#     help="Output: CSV file for mapping of AF2 domain before/after chopping",
-# )
 @click.option(
     "--distance_cutoff",
     type=int,
     required=False,
-    default=5,
-    help="Distance cutoff for the packing density in Angstrom. If none is given, a cutoff of 5 Angstrom will be applied",
+    default=DEFAULT_GLOB_DISTANCE,
+    help=f"Distance cutoff for the packing density in Angstrom. (default: {DEFAULT_GLOB_DISTANCE})",
 )
 @click.option(
     "--volume_resolution",
     type=int,
     required=False,
-    default=5,
-    help="The voxel resolution for approximating the protein volume. If none is given, a resolution of 5 Angstrom will be applied",
+    default=DEFAULT_GLOB_VOLUME,
+    help=f"The voxel resolution for approximating the protein volume. (default: {DEFAULT_GLOB_VOLUME})",
 )
 def measure_globularity(
     af_domain_list,
     af_chain_mmcif_dir,
     af_domain_globularity,
-    # af_domain_mapping_post_tailchop,
     distance_cutoff,
     volume_resolution,
+    gzipped_af_chains,
 ):
     "Checks the globularity of the AF domain"
 
     af_domain_list_reader = get_af_domain_id_reader(af_domain_list)
-
-    # af_domain_globularity_writer = get_csv_dictwriter(
-        # af_domain_list_post_tailchop, fieldnames=["af_domain_id"]
-    # )
-    # af_domain_list_post_tailchop_writer.writeheader()
 
     af_globularity_writer = get_csv_dictwriter(
         af_domain_globularity,
@@ -92,22 +86,16 @@ def measure_globularity(
     )
 
     for af_domain_id in af_domain_list_reader:
-        click.echo(f"Working on: {af_domain_id} ...")
+        LOG.debug(f"Working on: {af_domain_id} ...")
 
         af_domain_packing_density = calculate_packing_density(
-            af_domain_id, af_chain_mmcif_dir, distance_cutoff
+            af_domain_id, af_chain_mmcif_dir, distance_cutoff,gzipped_af_chains
         )
-        print(af_domain_packing_density)
 
         af_domain_normed_radius_gyration = calculate_normed_radius_of_gyration(
-            af_domain_id, af_chain_mmcif_dir,volume_resolution
+            af_domain_id, af_chain_mmcif_dir,volume_resolution,gzipped_af_chains
         )
-
-        print(af_domain_normed_radius_gyration)
-        # af_domain_list_post_tailchop_writer.writerow(
-            # {"af_domain_id": af_domain_packing_density}
-        # )
-
+        LOG.debug(f"Processed entry: {af_domain_id}\tpacking_density:{af_domain_packing_density}\tgiration:{af_domain_normed_radius_gyration}")
         af_globularity_writer.writerow(
             {
                 "af_domain_id": af_domain_id,
@@ -119,25 +107,11 @@ def measure_globularity(
     click.echo("DONE")
 
 
-def get_local_plddt_for_res(
-    structure,
-    residue_num: int,
-    *,
-    model_num: int = 0,
-    chain_id: str = "A",
-    atom_type: str = "CA",
-):
-    """
-    Returns the local pLDDT score for a given residue
-    """
-    return structure[model_num][chain_id][residue_num][atom_type].get_bfactor()
-
-
-
 def calculate_packing_density(
     af_domain_id: AFDomainID,
     af_chain_mmcif_dir: Path,
     distance_cutoff: int,
+    gzipped_af_chains,
     *,
     cif_filename=None,
 ) -> AFDomainID:
@@ -152,11 +126,16 @@ def calculate_packing_density(
 
     # create default filename
     if cif_filename is None:
-        cif_filename = af_domain_id.af_chain_id + ".cif.gz"
+        if gzipped_af_chains == False:
+            open_func = open
+            cif_filename = af_domain_id.af_chain_id + ".cif"
+        else:
+            open_func = gzip.open
+            cif_filename = af_domain_id.af_chain_id + ".cif.gz"
 
     cif_path = Path(af_chain_mmcif_dir, cif_filename)
 
-    with gzip.open(f"{cif_path}", mode="rt") as cif_fh:
+    with open_func(f"{cif_path}", mode="rt") as cif_fh:
 
         structure = MMCIFParser(QUIET=1).get_structure("struc", cif_fh)
 
@@ -203,6 +182,7 @@ def calculate_normed_radius_of_gyration(
     af_domain_id: AFDomainID,
     af_chain_mmcif_dir: Path,
     volume_resolution: int,
+    gzipped_af_chains,
     *,
     cif_filename=None,
 ) -> AFDomainID:
@@ -215,13 +195,17 @@ def calculate_normed_radius_of_gyration(
             domain_residues.append(res)
 
 
-    # create default filename
     if cif_filename is None:
-        cif_filename = af_domain_id.af_chain_id + ".cif.gz"
+        if gzipped_af_chains == False:
+            open_func = open
+            cif_filename = af_domain_id.af_chain_id + ".cif"
+        else:
+            open_func = gzip.open
+            cif_filename = af_domain_id.af_chain_id + ".cif.gz"
 
     cif_path = Path(af_chain_mmcif_dir, cif_filename)
 
-    with gzip.open(f"{cif_path}", mode="rt") as cif_fh:
+    with open_func(f"{cif_path}", mode="rt") as cif_fh:
 
         structure = MMCIFParser(QUIET=1).get_structure("struc", cif_fh)
 
