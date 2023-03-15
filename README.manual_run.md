@@ -1,4 +1,4 @@
-# Running CATH-AlphaFlow-CLI - Step-by-step Tutorial)
+# Running CATH-AlphaFlow-CLI - Step-by-step Tutorial
 ## UCL CS HPC (Test on 100,000 structures)
 
 Initial Steps:
@@ -327,6 +327,24 @@ cath-af-cli convert-foldseek-output-to-summary --id_file af_100k_domainlist_post
 ```
 
 Starting from 110,250 unique domain ids in foldseek output, resulting into 110,218 hits passing the thresholds.
+
+## Globularity prediction
+
+Start: 12.11
+End: 16.17
+Time: 2hrs 6 mins
+
+Split into 16 processes. Processing 120,113 domains
+
+Command:
+```
+split -l 7500 af_100k_domainlist_post_tailchop.txt split_af_100k_globularity_ -a 5 -d
+find split_af_100k_globularity_000* | xargs -P16 -I XXX sh -c 'cath-af-cli measure-globularity --af_domain_list XXX \
+    --af_chain_mmcif_dir af_cif_raw/ \
+    --af_domain_globularity af_100k_globularity_XXX.txt'
+```
+
+## Combine results
 
 
 
