@@ -191,7 +191,7 @@ class CrhPredictedCathDomainProviderBase(PredictedCathDomainProviderBase):
                     sequence_md5=crh.sequence_md5,
                     gene3d_domain_id=crh.domain_id,
                     bitscore=crh.bitscore,
-                    chopping=crh.chopping,
+                    chopping=crh.chopping_final,
                     indp_evalue=crh.indp_evalue,
                 )
                 yield pred_dom
