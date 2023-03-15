@@ -72,7 +72,6 @@ def convert_cif_to_plddt_summary(
     plddt_out_writer = get_plddt_summary_writer(plddt_stats_file)
 
     for af_domain_id_str in yield_first_col(id_file):
-
         if id_type == ID_TYPE_UNIPROT_DOMAIN:
             af_domain_id = AFDomainID.from_uniprot_str(
                 af_domain_id_str, version=af_version

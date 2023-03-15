@@ -8,6 +8,7 @@ from .models.domains import AFChainID
 from .models.domains import AFDomainID
 from .models.domains import DecoratedCrh
 from .models.domains import Gene3DCrh
+from .models.domains import StatusLog
 from .models.domains import RE_UNIPROT_ID
 from .errors import CsvHeaderError
 
@@ -98,6 +99,17 @@ class CsvReaderBase(csv.DictReader):
 
     def dict_to_obj(self, row: dict):
         return self.object_class(**row)
+
+
+class StatusLogReader(CsvReaderBase):
+    object_class = StatusLog
+
+
+def get_status_log_dictwriter(csvfile, **kwargs):
+    fieldnames = ["entry_id", "status", "error", "description"]
+    writer = get_csv_dictwriter(csvfile, fieldnames=fieldnames, **kwargs)
+    writer.writeheader()
+    return writer
 
 
 class AFDomainIDReader(CsvReaderBase):
