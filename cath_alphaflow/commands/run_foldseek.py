@@ -79,7 +79,7 @@ LOG = logging.getLogger()
 def run_foldseek(fs_querydb, fs_targetdb, fs_rawdata, fs_results, tmp_dir, cov_mode, coverage, alignment_type, fs_bin_path):
     "Run Foldseek Query DB against Target DB"
     assert str(fs_rawdata) != ''
-    subprocess.call(
+    subprocess.run(
         [
             fs_bin_path,
             "search",
@@ -97,6 +97,7 @@ def run_foldseek(fs_querydb, fs_targetdb, fs_rawdata, fs_results, tmp_dir, cov_m
             str(alignment_type)
         ],
         stderr=subprocess.DEVNULL,
+        check=True,
     )
     subprocess.run(
         [
