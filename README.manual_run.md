@@ -101,7 +101,9 @@ echo af_chain_id | cat - af_100k_chainlist_after_gsutil.txt > temp && mv temp af
 ## Convert CIF to FASTA 
 
 Process: 62,212 CIF files -> 62,212 FASTA files + merged.fasta
+
 Thoughts: Too slow on 1CPU (i.e. 30mins for 10k sequences, splitting and parallelizing)
+
 Time:  1hr 9 mins
 
 Input: 
