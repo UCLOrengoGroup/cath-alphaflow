@@ -154,6 +154,8 @@ datasets/
 cath-test-hpc-dataset100/
 results-*/
 nextflow
+foldseek/
+
 
 # Don't add confidential settings to github
 cath_alphaflow/settings.py
