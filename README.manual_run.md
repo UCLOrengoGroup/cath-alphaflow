@@ -330,8 +330,6 @@ Starting from 110,250 unique domain ids in foldseek output, resulting into 110,2
 
 ## Globularity prediction
 
-Start: 12.11
-End: 16.17
 Time: 2hrs 6 mins
 
 Split into 16 processes. Processing 120,113 domains
@@ -342,11 +340,17 @@ split -l 7500 af_100k_domainlist_post_tailchop.txt split_af_100k_globularity_ -a
 find split_af_100k_globularity_000* | xargs -P16 -I XXX sh -c 'cath-af-cli measure-globularity --af_domain_list XXX \
     --af_chain_mmcif_dir af_cif_raw/ \
     --af_domain_globularity af_100k_globularity_XXX.txt'
+cat af_100k_globularity_split_af_100k_globularity_000* > af_100k_globularity.txt
+rm split_af_100k_globularity_000*
+af_100k_globularity_split_af_100k_globularity_000*
 ```
+
+As this was done in chunks, remove the 16 additional occurences of the header from af_100k_globularity.txt
+
 
 ## Combine results
 
-
+TBD
 
 
 
