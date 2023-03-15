@@ -6,7 +6,7 @@ import tempfile
 
 from Bio import SeqIO
 from Bio.PDB import MMCIFParser
-from Bio.PDB.Polypeptide import three_to_one
+from Bio.PDB.Polypeptide import protein_letters_3to1
 from Bio.PDB.mmcifio import MMCIFIO
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 
@@ -143,7 +143,7 @@ def test_chop_multi_fragment():
         structure = parser.get_structure(uniprot_with_chopping, fp)
 
     sequence_from_chopped_cif = "".join(
-        [three_to_one(res.get_resname()) for res in structure.get_residues()]
+        [protein_letters_3to1[res.get_resname()] for res in structure.get_residues()]
     )
 
     assert sequence_from_chopped_fasta == sequence_from_chopped_cif

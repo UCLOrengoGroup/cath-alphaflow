@@ -154,9 +154,10 @@ datasets/
 cath-test-hpc-dataset100/
 results-*/
 nextflow
+foldseek/
+
 
 # Don't add confidential settings to github
 cath_alphaflow/settings.py
-tests/examples/eg_oracle.py
 tests/examples/eg_oracle.py
 cath_alphaflow/settings.py
