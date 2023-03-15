@@ -36,24 +36,16 @@ def cif_to_fasta(cif_path=Path, chain_id=0):
         sequence = ""
         for residue in chain:
             resname = residue.get_resname()
-            if (
-                resname
-                not in {
-                    "HOH",
-                    "H2O",
-                }
-                and seq1(resname) != "X"
-            ):
+            if seq1(resname) != "X":
                 sequence += seq1(resname)
     return header, sequence
 
 
-# TODO Test that it's still working
 def write_fasta_file(header, sequence, fasta_out_file):
     """Write a FASTA file with the given header and sequence to the specified directory,
     optionally appending to a multi-FASTA file if it already exists.
     """
-    record = SeqRecord(Seq(sequence), id=header)
+    record = SeqRecord(Seq(sequence), id=header, description='')
     SeqIO.write(record, fasta_out_file, "fasta")
 
 

@@ -46,6 +46,16 @@ class DecoratedCrh:
     indp_evalue: float
     reg_ostats: str
 
+@dataclass
+class StatusLog:
+    """
+    Holds data corresponding to an entry in a Status Log file
+    """
+    entry_id: str
+    status: str
+    error: str
+    description: str
+
 
 @dataclass
 class PredictedCathDomain:

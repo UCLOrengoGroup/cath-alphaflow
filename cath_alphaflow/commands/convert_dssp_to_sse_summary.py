@@ -39,8 +39,8 @@ from cath_alphaflow.constants import (
 @click.option(
     "--id_type",
     type=click.Choice([ID_TYPE_SIMPLE, ID_TYPE_AF_DOMAIN, ID_TYPE_UNIPROT_DOMAIN]),
-    default=ID_TYPE_SIMPLE,
-    help=f"Option: specify the type of ID to specify the chopping [{ID_TYPE_SIMPLE}]",
+    default=ID_TYPE_AF_DOMAIN,
+    help=f"Option: specify the type of ID to specify the chopping [{ID_TYPE_AF_DOMAIN}]",
 )
 @click.option(
     "--sse_out_file",
