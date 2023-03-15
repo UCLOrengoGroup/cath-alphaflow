@@ -2,11 +2,12 @@ import csv
 import logging
 import itertools
 from typing import List, Type
-from dataclasses import fields
+import dataclasses
 
 from .models.domains import AFChainID
 from .models.domains import AFDomainID
 from .models.domains import DecoratedCrh
+from .models.domains import Gene3DCrh
 from .models.domains import StatusLog
 from .models.domains import RE_UNIPROT_ID
 from .errors import CsvHeaderError
@@ -16,11 +17,26 @@ LOG = logging.getLogger(__name__)
 
 class CsvReaderBase(csv.DictReader):
     """
-    Generic CSV reader that maps rows to objects
+    Generic CSV reader that can return rows as objects
+
+    Args:
+        fieldnames (`List[str]`): names of the CSV fields
+        object_class (`Type[object]`): return each row as an instance of this class
+
+    If `object_class` is set then the reader will attempt to yield an instance of
+    the object class using the `dict` provided by the CSV row. If `object_class` is
+    not set then the re will just return a `dict`.
+
+    CSV fieldnames can be set explicitly via `fieldnames`. If this is not set
+    then the fieldnames will be inferred from the attributes of `object_class`.
+
     """
 
     object_class: Type[object] = None
     fieldnames: List[str] = None
+    has_header: bool = True
+
+    DEFAULT_DELIMITER: str = ","
 
     def __init__(
         self,
@@ -28,19 +44,34 @@ class CsvReaderBase(csv.DictReader):
         *args,
         **kwargs,
     ):
+        if "delimiter" not in kwargs:
+            kwargs["delimiter"] = self.get_default_delimiter()
+
         super().__init__(f, *args, **kwargs)
         self._seen_header = False
 
-        if not self.fieldnames:
+        if self.fieldnames is None:
             if "fieldnames" in kwargs:
                 fieldnames = kwargs["fieldnames"]
             else:
                 fieldnames = [
                     f.name
-                    for f in fields(self.object_class)
+                    for f in self.get_result_object_fields()
                     if not f.name.startswith("_")
                 ]
             self.fieldnames = fieldnames
+
+    def get_default_delimiter(self):
+        return self.DEFAULT_DELIMITER
+
+    def get_result_object_fields(self):
+        # pydantic model
+        if hasattr(self.object_class, "__fields__"):
+            fields = list(self.object_class.__fields__.values())
+        # dataclasses
+        else:
+            fields = dataclasses.fields(self.object_class)
+        return fields
 
     def __next__(self):
         """
@@ -48,13 +79,13 @@ class CsvReaderBase(csv.DictReader):
         """
 
         dictrow = super().__next__()
-        if not self._seen_header:
+        if not self._seen_header and self.has_header:
             self._seen_header = True
             if list(dictrow.keys()) != self.fieldnames:
                 msg = (
                     f"expected first line of {self.__class__.__name__} "
                     f"to contain fieldnames {self.fieldnames}, "
-                    f"but found {dictrow.keys()}) (reader: {self.reader})"
+                    f"but found {list(dictrow.keys())}) (reader: {self.reader})"
                 )
                 raise CsvHeaderError(msg)
             dictrow = super().__next__()
@@ -62,19 +93,24 @@ class CsvReaderBase(csv.DictReader):
         if not self.object_class:
             return dictrow
 
-        return self.dict_to_obj(dictrow)
+        obj = self.dict_to_obj(dictrow)
+
+        return obj
 
     def dict_to_obj(self, row: dict):
-        return self.return_class(**row)
+        return self.object_class(**row)
+
 
 class StatusLogReader(CsvReaderBase):
     object_class = StatusLog
 
+
 def get_status_log_dictwriter(csvfile, **kwargs):
-    fieldnames = ["entry_id","status","error","description"]
+    fieldnames = ["entry_id", "status", "error", "description"]
     writer = get_csv_dictwriter(csvfile, fieldnames=fieldnames, **kwargs)
     writer.writeheader()
     return writer
+
 
 class AFDomainIDReader(CsvReaderBase):
     object_class = AFDomainID
@@ -94,6 +130,15 @@ class AFChainIDReader(CsvReaderBase):
 
 class DecoratedCrhReader(CsvReaderBase):
     object_class = DecoratedCrh
+    has_header = False
+
+
+class Gene3DCrhReader(CsvReaderBase):
+    object_class = Gene3DCrh
+    has_header = False
+
+    def get_default_delimiter(self):
+        return "\t"
 
 
 class UniprotIDReader(CsvReaderBase):

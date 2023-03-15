@@ -2,6 +2,7 @@ import logging
 import re
 from typing import List, Callable
 from dataclasses import dataclass, asdict
+from pydantic import BaseModel
 
 from ..errors import ParseError, NoMatchingFragmentError
 from ..constants import (
@@ -28,8 +29,60 @@ RE_UNIPROT_DOMAIN_ID = re.compile(
 LOG = logging.getLogger(__name__)
 
 
-@dataclass
-class DecoratedCrh:
+class CrhBase(BaseModel):
+    """
+    Defines the common interface for "original" and "decorated" CRH rows
+    """
+
+    domain_id: str
+    superfamily_id: str
+    sequence_md5: str
+    model_id: str
+    bitscore: float
+    chopping_raw: str
+    chopping_final: str
+
+
+class CrhProvider(BaseModel):
+    def to_crh(self):
+        return CrhBase(
+            domain_id=self.domain_id,
+            superfamily_id=self.superfamily_id,
+            sequence_md5=self.sequence_md5,
+            model_id=self.model_id,
+            bitscore=self.bitscore,
+            chopping_raw=self.chopping_raw,
+            chopping_final=self.chopping_final,
+        )
+
+
+class Gene3DCrh(CrhProvider):
+    """
+    Holds data corresponding to an entry from a Gene3D CRH file
+    """
+
+    # 3ce18771b4195d6aad287c3965a3c4f8        5ksdA01__1.20.1110.10/95-132_218-326_627-816    1054.6  95-132,218-326,627-816  95-132,218-326,627-816
+
+    sequence_md5: str
+    domain_sfam_id: str
+    bitscore: float
+    chopping_raw: str
+    chopping_final: str
+
+    @property
+    def domain_id(self):
+        return self.domain_sfam_id.split("__")[0]
+
+    @property
+    def model_id(self):
+        return self.domain_id
+
+    @property
+    def superfamily_id(self):
+        return self.domain_sfam_id.split("__")[1].split("/")[0]
+
+
+class DecoratedCrh(CrhProvider):
     """
     Holds data corresponding to an entry in a 'Decorated' CATH Resolve Hits file
     """
@@ -57,8 +110,7 @@ class StatusLog:
     description: str
 
 
-@dataclass
-class PredictedCathDomain:
+class PredictedCathDomain(BaseModel):
     """
     Holds data on a PredictedCathDomain (from Gene3D)
     """
