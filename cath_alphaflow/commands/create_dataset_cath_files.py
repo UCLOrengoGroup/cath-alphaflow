@@ -109,34 +109,19 @@ def create_cath_dataset_from_db(*args, **kwargs):
     help="Input: CSV file containing AF chain ID, UniProt IDs, MD5 lookup",
 )
 @click.option(
-    "--src_gene3d_crh",
-    type=click.File("rt"),
-    required=False,
-    help="Input: Gene3D CRH file containing matches",
-)
-@click.option(
     "--src_decorated_crh",
     type=click.File("rt"),
-    required=False,
+    required=True,
     help="Input: Decorated CRH file containing matches",
 )
-def create_cath_dataset_from_files(src_gene3d_crh, src_decorated_crh, **kwargs):
+def create_cath_dataset_from_files(src_decorated_crh, **kwargs):
     """
     Creates CATH data files for a given dataset (based on flat files)
     """
 
-    if not src_gene3d_crh and not src_decorated_crh:
-        raise click.UsageError(f"must specify at least one source")
-
-    if src_gene3d_crh and src_decorated_crh:
-        raise click.UsageError(f"cannot specify more than one source")
-
-    if src_gene3d_crh:
-        generator = CathDatasetGeneratorFromGene3DCrh(src_crh=src_gene3d_crh, **kwargs)
-    elif src_decorated_crh:
-        generator = CathDatasetGeneratorFromDecoratedCrh(
-            src_crh=src_decorated_crh, **kwargs
-        )
+    generator = CathDatasetGeneratorFromDecoratedCrh(
+        src_crh=src_decorated_crh, **kwargs
+    )
 
     generator.run()
 
@@ -301,17 +286,13 @@ class CathDatasetGeneratorFromDB(CathDatasetGeneratorBase):
             yield entry
 
 
-class CathDatasetGeneratorFromCrhFileBase(CathDatasetGeneratorBase):
+class CathDatasetGeneratorFromDecoratedCrh(CathDatasetGeneratorBase):
     src_crh: io.TextIOWrapper  # from click.File
     src_af_uniprot_md5: io.TextIOWrapper  # from click.File
 
-    @property
-    def predicted_domain_provider_class(self):
-        return NotImplementedError
-
     def next_cath_dataset_entry(self, uniprot_ids):
 
-        provider = self.predicted_domain_provider_class(
+        provider = DecoratedCrhPredictedCathDomainProvider(
             datasource=self.src_crh,
             af_uniprot_md5_file=self.src_af_uniprot_md5,
         )
@@ -320,23 +301,3 @@ class CathDatasetGeneratorFromCrhFileBase(CathDatasetGeneratorBase):
             uniprot_ids=uniprot_ids,
         ):
             yield entry
-
-
-class CathDatasetGeneratorFromDecoratedCrh(CathDatasetGeneratorFromCrhFileBase):
-    """
-    Generate CATH dataset from decorated CRH file
-    """
-
-    @property
-    def predicted_domain_provider_class(self):
-        return DecoratedCrhPredictedCathDomainProvider
-
-
-class CathDatasetGeneratorFromGene3DCrh(CathDatasetGeneratorBase):
-    """
-    Generate CATH dataset from Gene3D CRH file
-    """
-
-    @property
-    def predicted_domain_provider_class(self):
-        return Gene3DCrhPredictedCathDomainProvider
