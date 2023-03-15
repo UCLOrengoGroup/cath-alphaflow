@@ -4,8 +4,23 @@ import logging
 from click.testing import CliRunner
 from cath_alphaflow.cli import cli
 from cath_alphaflow.io_utils import DecoratedCrhReader, Gene3DCrhReader
+import shutil
+import os
+
+from .utils import assert_files_match
 
 LOG = logging.getLogger(__name__)
+
+DATASET_DIR = Path(__file__).parent / "fixtures" / "dataset10"
+
+TEST_DECORATED_CRH_FILE = DATASET_DIR / "dataset10.decorated_crh.csv"
+TEST_GENE3D_CRH_FILE = DATASET_DIR / "dataset10.gene3d_crh.csv"
+TEST_UNIPROT_IDS_FILE = DATASET_DIR / "dataset10.uniprot_ids.csv"
+TEST_MD5_FILE = DATASET_DIR / "dataset10.md5.csv"
+TEST_AF_UNIPROT_MD5_FILE = DATASET_DIR / "dataset10.af_uniprot_md5.csv"
+TEST_AF_CATH_ANNOTATIONS_FILE = DATASET_DIR / "dataset10.cath_annotations.csv"
+
+BOOTSTRAP_TESTS = os.environ.get("CATHAF_BOOTSTRAP_TESTS", False)
 
 UNIPROT_IDS = ["P00520"]
 
@@ -107,23 +122,13 @@ def mock_gene3d_crh_text():
         (COMMAND_DB, (), "Error: Missing option '--dbname'"),
         (
             COMMAND_FILES,
-            ("--src_gene3d_crh",),
-            "Error: Missing option '--src_af_uniprot_md5'",
-        ),
-        (
-            COMMAND_FILES,
             ("--src_decorated_crh",),
             "Error: Missing option '--src_af_uniprot_md5'",
         ),
         (
             COMMAND_FILES,
             ("--src_af_uniprot_md5",),
-            "must specify at least one",
-        ),
-        (
-            COMMAND_FILES,
-            ("--src_af_uniprot_md5", "--src_gene3d_crh", "--src_decorated_crh"),
-            "cannot specify more than one",
+            "Error: Missing option '--src_decorated_crh'",
         ),
     ],
 )
@@ -152,43 +157,36 @@ DECORATED_CRH_FILENAME = "decorated.crh"
 
 
 @pytest.mark.parametrize(
-    "subcommand,extra_args,src_file,src_text_func",
+    "subcommand,extras_arg_tmpfile_src",
     [
         (
             COMMAND_FILES,
             (
-                "--src_af_uniprot_md5",
-                AF_UNIPROT_MD5_FILENAME,
-                "--src_gene3d_crh",
-                GENE3D_CRH_FILENAME,
+                [
+                    "--csv_uniprot_ids",
+                    "uniprot_ids.csv",
+                    TEST_UNIPROT_IDS_FILE,
+                ],
+                [
+                    "--src_af_uniprot_md5",
+                    "af_uniprot_md5.csv",
+                    TEST_AF_UNIPROT_MD5_FILE,
+                ],
+                ["--src_decorated_crh", "decorated.crh", TEST_DECORATED_CRH_FILE],
             ),
-            GENE3D_CRH_FILENAME,
-            mock_gene3d_crh_text,
-        ),
-        (
-            COMMAND_FILES,
-            (
-                "--src_af_uniprot_md5",
-                AF_UNIPROT_MD5_FILENAME,
-                "--src_decorated_crh",
-                DECORATED_CRH_FILENAME,
-            ),
-            DECORATED_CRH_FILENAME,
-            mock_decorated_crh_text,
         ),
     ],
 )
-def test_create_dataset_crh_output(subcommand, extra_args, src_file, src_text_func):
+def test_create_dataset_crh_output(subcommand, extras_arg_tmpfile_src):
     """
     Checks we get the same output for gene3d/decorated crh input
     """
 
-    src_text = src_text_func()
-
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with runner.isolated_filesystem() as td:
 
         shared_args = []
+        extra_args = []
         for opt in INPUT_OPTIONS:
             infilename = opt.replace("--", "") + ".txt"
             shared_args.extend([opt, infilename])
@@ -199,37 +197,31 @@ def test_create_dataset_crh_output(subcommand, extra_args, src_file, src_text_fu
             expected_outfiles.extend([outfilename])
             shared_args.extend([opt, outfilename])
 
-        with Path(AF_UNIPROT_MD5_FILENAME).open("wt") as fp:
-            fp.write(mock_af_uniprot_md5_text())
-
-        with Path(src_file).open("wt") as fp:
-            fp.write(src_text)
+        for cmd_arg, tmpfilename, src_path in extras_arg_tmpfile_src:
+            shutil.copy2(str(src_path), tmpfilename)
+            extra_args.extend([cmd_arg, tmpfilename])
 
         result = runner.invoke(cli, [subcommand, *shared_args, *extra_args])
+
+        if result.exit_code != 0:
+            full_cmd = " ".join(["cath-af-cli", subcommand, *shared_args, *extra_args])
+            print(f"ERROR: CMD: {full_cmd}")
+            print(f"ERROR: EXCEPTION: {result.exception}")
+
         assert result.exit_code == 0
 
         annotations_path = Path("af_cath_annotations.txt")
-        assert annotations_path.exists()
-        with annotations_path.open("rt") as fp:
-            annotation_lines = []
-            for _line in fp:
-                annotation_lines.extend([_line])
-
-        if not len(annotation_lines) == COUNT_UNIPROT_IDS:
-            print(f"OUTPUT: {''.join(result.output)}")
-            print(f"LINES: {''.join(annotation_lines)}")
-
-        assert len(annotation_lines) == COUNT_UNIPROT_IDS
+        assert_files_match(
+            test=annotations_path,
+            expected=TEST_AF_CATH_ANNOTATIONS_FILE,
+            bootstrap_results=BOOTSTRAP_TESTS,
+        )
 
 
 @pytest.mark.parametrize(
     "subcommand,extra_args",
     [
         (COMMAND_DB, ["--dbname", "gene3d_21"]),
-        (
-            COMMAND_FILES,
-            ["--src_af_uniprot_md5", "foo.csv", "--src_gene3d_crh", "bar.csv"],
-        ),
         (
             COMMAND_FILES,
             ["--src_af_uniprot_md5", "foo.csv", "--src_decorated_crh", "bar.csv"],
