@@ -6,7 +6,6 @@ import tempfile
 
 from Bio import SeqIO
 from Bio.PDB import MMCIFParser
-from Bio.PDB.Polypeptide import three_to_one
 from Bio.PDB.Polypeptide import protein_letters_3to1
 from Bio.PDB.mmcifio import MMCIFIO
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
