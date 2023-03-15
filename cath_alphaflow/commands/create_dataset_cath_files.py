@@ -1,7 +1,8 @@
-from email.policy import default
 import logging
-import click
+import io
 import typing
+
+import click
 import pydantic
 
 from cath_alphaflow.io_utils import get_uniprot_id_dictreader
@@ -10,7 +11,10 @@ from cath_alphaflow.io_utils import chunked_iterable
 from cath_alphaflow.db_utils import OraDB
 from cath_alphaflow.models.domains import Chopping, AFChainID, AFDomainID
 from cath_alphaflow.settings import DEFAULT_AF_VERSION, DEFAULT_AF_FRAGMENT
-from cath_alphaflow.dataset_provider import AnnotatedCrhDatasetProvider
+from cath_alphaflow.predicted_domain_provider import (
+    Gene3DCrhPredictedCathDomainProvider,
+    DecoratedCrhPredictedCathDomainProvider,
+)
 
 LOG = logging.getLogger()
 
@@ -105,16 +109,35 @@ def create_cath_dataset_from_db(*args, **kwargs):
     help="Input: CSV file containing AF chain ID, UniProt IDs, MD5 lookup",
 )
 @click.option(
-    "--src_crh",
+    "--src_gene3d_crh",
     type=click.File("rt"),
-    required=True,
-    help="Input: CRH file containing matches",
+    required=False,
+    help="Input: Gene3D CRH file containing matches",
 )
-def create_cath_dataset_from_files(*args, **kwargs):
+@click.option(
+    "--src_decorated_crh",
+    type=click.File("rt"),
+    required=False,
+    help="Input: Decorated CRH file containing matches",
+)
+def create_cath_dataset_from_files(src_gene3d_crh, src_decorated_crh, **kwargs):
     """
     Creates CATH data files for a given dataset (based on flat files)
     """
-    generator = CathDatasetGeneratorFromFiles(*args, **kwargs)
+
+    if not src_gene3d_crh and not src_decorated_crh:
+        raise click.UsageError(f"must specify at least one source")
+
+    if src_gene3d_crh and src_decorated_crh:
+        raise click.UsageError(f"cannot specify more than one source")
+
+    if src_gene3d_crh:
+        generator = CathDatasetGeneratorFromGene3DCrh(src_crh=src_gene3d_crh, **kwargs)
+    elif src_decorated_crh:
+        generator = CathDatasetGeneratorFromDecoratedCrh(
+            src_crh=src_decorated_crh, **kwargs
+        )
+
     generator.run()
 
 
@@ -136,7 +159,7 @@ class CathDatasetGeneratorBase(pydantic.BaseModel):
     af_cath_annotations_writer: typing.Any = None
 
     class Config:
-        arbitrary_types_allowed: True
+        arbitrary_types_allowed = True
 
     def run(self):
 
@@ -278,14 +301,18 @@ class CathDatasetGeneratorFromDB(CathDatasetGeneratorBase):
             yield entry
 
 
-class CathDatasetGeneratorFromFiles(CathDatasetGeneratorBase):
+class CathDatasetGeneratorFromCrhFileBase(CathDatasetGeneratorBase):
+    src_crh: io.TextIOWrapper  # from click.File
+    src_af_uniprot_md5: io.TextIOWrapper  # from click.File
 
-    src_crh_file: typing.Any  # click.File
-    src_af_uniprot_md5: typing.Any  # click.File
+    @property
+    def predicted_domain_provider_class(self):
+        return NotImplementedError
 
     def next_cath_dataset_entry(self, uniprot_ids):
-        provider = AnnotatedCrhDatasetProvider(
-            datasource=self.src_crh_file,
+
+        provider = self.predicted_domain_provider_class(
+            datasource=self.src_crh,
             af_uniprot_md5_file=self.src_af_uniprot_md5,
         )
 
@@ -293,3 +320,23 @@ class CathDatasetGeneratorFromFiles(CathDatasetGeneratorBase):
             uniprot_ids=uniprot_ids,
         ):
             yield entry
+
+
+class CathDatasetGeneratorFromDecoratedCrh(CathDatasetGeneratorFromCrhFileBase):
+    """
+    Generate CATH dataset from decorated CRH file
+    """
+
+    @property
+    def predicted_domain_provider_class(self):
+        return DecoratedCrhPredictedCathDomainProvider
+
+
+class CathDatasetGeneratorFromGene3DCrh(CathDatasetGeneratorBase):
+    """
+    Generate CATH dataset from Gene3D CRH file
+    """
+
+    @property
+    def predicted_domain_provider_class(self):
+        return Gene3DCrhPredictedCathDomainProvider

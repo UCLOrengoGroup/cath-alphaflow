@@ -2,6 +2,7 @@ import logging
 import re
 from typing import List, Callable
 from dataclasses import dataclass, asdict
+from pydantic import BaseModel
 
 from ..errors import ParseError, NoMatchingFragmentError
 from ..constants import (
@@ -29,7 +30,71 @@ LOG = logging.getLogger(__name__)
 
 
 @dataclass
-class DecoratedCrh:
+class CrhBase:
+    """
+    Defines the common interface for "original" and "decorated" CRH rows
+    """
+
+    @property
+    def domain_id(self):
+        raise NotImplementedError
+
+    @property
+    def superfamily_id(self):
+        raise NotImplementedError
+
+    @property
+    def sequence_md5(self):
+        raise NotImplementedError
+
+    @property
+    def model_id(self):
+        raise NotImplementedError
+
+    @property
+    def bitscore(self):
+        raise NotImplementedError
+
+    @property
+    def chopping_raw(self):
+        raise NotImplementedError
+
+    @property
+    def chopping_final(self):
+        raise NotImplementedError
+
+
+class Gene3DCrh(CrhBase):
+    """
+    Holds data corresponding to an entry from a Gene3D CRH file
+    """
+
+    # 3ce18771b4195d6aad287c3965a3c4f8        5ksdA01__1.20.1110.10/95-132_218-326_627-816    1054.6  95-132,218-326,627-816  95-132,218-326,627-816
+
+    sequence_md5: str
+    domain_sfam_id: str
+    bitscore: float
+    chopping_raw: str
+    chopping_final: str
+
+    @property
+    def domain_id(self):
+        if not hasattr(self, "_domain_id"):
+            self._domain_id = self.domain_sfam_id.split("__")[0]
+        return self._domain_id
+
+    @property
+    def model_id(self):
+        return self.domain_id
+
+    @property
+    def superfamily_id(self):
+        if not hasattr(self, "_superfamily_id"):
+            self._superfamily_id = self.domain_sfam_id.split("__")[1].split("/")[0]
+        return self._superfamily_id
+
+
+class DecoratedCrh(CrhBase):
     """
     Holds data corresponding to an entry in a 'Decorated' CATH Resolve Hits file
     """
