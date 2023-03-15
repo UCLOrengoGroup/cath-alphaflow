@@ -10,7 +10,7 @@ from Bio.PDB.Polypeptide import three_to_one
 from Bio.PDB.mmcifio import MMCIFIO
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 
-from cath_alphaflow.models import Chopping, AFDomainID
+from cath_alphaflow.models.domains import Chopping, AFDomainID
 from cath_alphaflow.chopping import ChoppingProcessor, chop_cif
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures"

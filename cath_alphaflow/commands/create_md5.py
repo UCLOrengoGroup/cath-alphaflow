@@ -1,18 +1,11 @@
 import logging
-from pathlib import Path
 import click
-import csv
-import hashlib
 
 from Bio import SeqIO
 
-from cath_alphaflow.io_utils import yield_first_col, get_csv_dictwriter
-from cath_alphaflow.models import AFDomainID
-from cath_alphaflow.constants import (
-    ID_TYPE_AF_DOMAIN,
-    ID_TYPE_UNIPROT_DOMAIN,
-    ID_TYPE_SIMPLE,
-)
+from cath_alphaflow.io_utils import get_af_uniprot_md5_summary_writer
+from cath_alphaflow.seq_utils import str_to_md5
+from cath_alphaflow.errors import ParseError
 
 DEFAULT_CHUNK_SIZE = 1000000
 
@@ -21,23 +14,11 @@ LOG = logging.getLogger()
 
 @click.command()
 @click.option(
-    "--id_file",
-    type=click.File("rt"),
-    required=True,
-    help="Input: CSV file containing list of ids to convert from CIF to DSSP",
-)
-@click.option(
     "--fasta",
     "fasta_file",
-    type=click.Path(exists=True, file_okay=True, dir_okay=False),
+    type=click.File("rt"),
     required=True,
     help=f"Input: the fasta database containing all AF sequences",
-)
-@click.option(
-    "--id_type",
-    type=click.Choice([ID_TYPE_AF_DOMAIN, ID_TYPE_UNIPROT_DOMAIN, ID_TYPE_SIMPLE]),
-    default=ID_TYPE_AF_DOMAIN,
-    help=f"Option: specify the type of ID to specify the chopping [{ID_TYPE_AF_DOMAIN}]",
 )
 @click.option(
     "--uniprot_md5_csv",
@@ -46,65 +27,30 @@ LOG = logging.getLogger()
     required=True,
     help="Output: UniProt to MD5 CSV file",
 )
-@click.option(
-    "--chunk_size",
-    type=int,
-    default=DEFAULT_CHUNK_SIZE,
-    help=f"Options: process uniprot accessions in chunks (if you run out of memory) [{DEFAULT_CHUNK_SIZE}]",
-)
-def create_md5(id_file, fasta_file, id_type, uniprot_md5_csv_file, chunk_size):
+def create_md5(fasta_file, uniprot_md5_csv_file):
     "Calculate MD5 for FASTA sequences"
+    with uniprot_md5_csv_file as out_fh:
+        md5_out_writer = get_af_uniprot_md5_summary_writer(out_fh)
+        # work through fasta file, calculate output for relevant records
+        for record in SeqIO.parse(fasta_file, "fasta"):
+            # click.echo(f"record: {record.id} seq='{record.seq[:10]}...'")
 
-    csv_fieldnames = ["uniprot_acc", "sequence_md5"]
-    with open(uniprot_md5_csv_file, mode="wt") as out_fp:
-        csv_writer = get_csv_dictwriter(out_fp, fieldnames=csv_fieldnames)
-        csv_writer.writeheader()
+            # >AFDB:AF-A0A2L2JPH6-F1
+            header_id = record.id
+            if header_id.startswith("AFDB:"):
+                header_id = header_id[5:]
+            af_chain_id = header_id
 
-        # chunk uniprot ids (in case we have many millions)
-        for uniprot_ids in yield_first_col_chunked(
-            id_file, id_type, chunk_size=chunk_size
-        ):
+            try:
+                af_uniprot_id = af_chain_id.split("-")[1]
+            except:
+                raise ParseError(f"Failed to parse {record.id} as AlphaFold Chain ID")
 
-            # work through fasta file, calculate output for relevant records
-            with open(fasta_file, "rt") as fasta_fp:
-                for record in SeqIO.parse(fasta_fp, "fasta"):
-                    click.echo(f"record: {record.id} seq='{record.seq[:10]}...'")
-
-                    _db, uniprot_acc, _name = record.id.split("|")
-
-                    if uniprot_acc not in uniprot_ids:
-                        click.echo(f"skipping: {record.id}")
-                        continue
-
-                    row_data = {
-                        "uniprot_acc": uniprot_acc,
-                        "sequence_md5": str_to_md5(record.seq),
-                    }
-                    csv_writer.write(row_data)
+            row_data = {
+                "af_chain_id": af_chain_id,
+                "uniprot_id": af_uniprot_id,
+                "sequence_md5": str_to_md5(str(record.seq)),
+            }
+            md5_out_writer.writerow(row_data)
 
     click.echo("DONE")
-
-
-def str_to_md5(in_str):
-    md5 = hashlib.md5(in_str.encode("utf-8")).hexdigest()
-    return md5
-
-
-def yield_first_col_chunked(id_file, id_type, chunk_size):
-
-    uniprot_ids = set()
-    for id_str in yield_first_col(id_file):
-        uniprot_id = None
-        if id_type == ID_TYPE_AF_DOMAIN:
-            uniprot_id = AFDomainID.from_str(id_str).uniprot_acc
-        elif id_type == ID_TYPE_SIMPLE:
-            uniprot_id = id_str
-        else:
-            raise click.UsageError(f"failed to recognise id_type={id_type}")
-
-        uniprot_ids.add(uniprot_id)
-        if len(uniprot_ids) % chunk_size == 0:
-            yield uniprot_ids
-            uniprot_ids = set()
-
-    yield uniprot_ids

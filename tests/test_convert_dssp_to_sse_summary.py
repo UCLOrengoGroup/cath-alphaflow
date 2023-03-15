@@ -3,7 +3,7 @@ from pathlib import Path
 import csv
 from click.testing import CliRunner
 from cath_alphaflow.cli import cli
-from cath_alphaflow.models import SecStrSummary
+from cath_alphaflow.models.domains import SecStrSummary
 
 
 UNIPROT_IDS = ["P00520"]
@@ -32,22 +32,24 @@ def write_ids_to_file(fh, headers, ids):
 def create_fake_dssp_dir(dirname, ids, dssp_src=EXAMPLE_DSSP_FILE):
     dir_path = Path(dirname)
     dir_path.mkdir()
-    for _id in ids:
+    chain_ids = ["AF-P00520-F1-model_v3", "AF-P00520-F1-model_v3"]
+    for _id in chain_ids:
         dssp_path_dest = dir_path / f"{_id}.dssp"
-        os.symlink(dssp_src, f"{dssp_path_dest}")
+        if dssp_path_dest.is_symlink():
+            dssp_path_dest.unlink()
+        os.symlink(dssp_src, f"{dssp_path_dest}",)
     return dir_path
 
 
 def test_convert_dssp(tmp_path):
 
     headers = ["header"]
-    ids = ["id1", "id2"]
+    ids = ["AF-P00520-F1-model_v3/61-117", "AF-P00520-F1-model_v3-319-513"]
 
-    # TODO: fix the last two cols
     expected_rows = [
-        ["id1", "313", "1123", "72.13", "17", "23", "40"],
-        ["id2", "313", "1123", "72.13", "17", "23", "40"],
-    ]
+            ["AF-P00520-F1-model_v3-61-117", "23", "57", "59.65", "0", "5", "5"],
+            ["AF-P00520-F1-model_v3-319-513", "102", "195", "47.69", "8", "6", "14"],
+        ]
 
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):

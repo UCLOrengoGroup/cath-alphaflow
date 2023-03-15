@@ -8,7 +8,7 @@ from cath_alphaflow.cli import cli
 from cath_alphaflow.commands.optimise_domain_boundaries import (
     calculate_domain_id_post_tailchop,
 )
-from cath_alphaflow.models import AFDomainID
+from cath_alphaflow.models.domains import AFDomainID
 
 
 UNIPROT_IDS = ["P00520"]
@@ -69,12 +69,14 @@ def test_optimise_domain_boundaries(tmp_path):
         _dir = Path(f"{td}")
 
         tmp_cif_path = create_fake_cif_dir(_dir / "cif", chain_ids)
+        tmp_gzipped_status = "True"
         tmp_id_path = _dir / "ids.csv"
         with tmp_id_path.open("wt") as fh:
             write_ids_to_file(fh, headers, af_domain_ids)
 
         tmp_list_post_chop_path = _dir / "domain_list_post_tailchop.csv"
         tmp_mapping_post_chop_path = _dir / "domain_mapping_post_tailchop.csv"
+        tmp_optimise_boundaries_status_log = _dir/ "optimise_boundaries_status.log"
 
         args = (
             SUBCOMMAND,
@@ -86,8 +88,12 @@ def test_optimise_domain_boundaries(tmp_path):
             f"{tmp_list_post_chop_path}",
             "--af_domain_mapping_post_tailchop",
             f"{tmp_mapping_post_chop_path}",
+            "--status_log",
+            f"{tmp_optimise_boundaries_status_log}",
+            "--gzipped_af_chains",
+            f"{tmp_gzipped_status}",
         )
-        # print(f"Running: cath-af-cli {' '.join(args)}")
+        print(f"Running: cath-af-cli {' '.join(args)}")
         result = runner.invoke(cli, args)
         assert result.exit_code == 0
         assert "DONE" in result.output

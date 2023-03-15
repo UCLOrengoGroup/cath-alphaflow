@@ -3,13 +3,15 @@ import re
 from typing import List, Callable
 from dataclasses import dataclass, asdict
 
-from .errors import ParseError, NoMatchingFragmentError
-from .constants import (
+from ..errors import ParseError, NoMatchingFragmentError
+from ..constants import (
     DEFAULT_HELIX_MIN_LENGTH,
     DEFAULT_STRAND_MIN_LENGTH,
     AF_FRAGMENT_MAX_RESIDUES,
     AF_FRAGMENT_OVERLAP_WINDOW,
 )
+
+RE_UNIPROT_ID = re.compile(r"(?P<uniprot_acc>[0-9A-Z]{6}|[0-9A-Z]{10})$")
 
 RE_AF_CHAIN_ID = re.compile(
     r"^AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9])-model_v(?P<version>[0-9]+)$"
@@ -24,6 +26,35 @@ RE_UNIPROT_DOMAIN_ID = re.compile(
 )
 
 LOG = logging.getLogger(__name__)
+
+
+@dataclass
+class DecoratedCrh:
+    """
+    Holds data corresponding to an entry in a 'Decorated' CATH Resolve Hits file
+    """
+
+    domain_id: str
+    superfamily_id: str
+    sequence_md5: str
+    model_id: str
+    bitscore: float
+    chopping_raw: str
+    chopping_final: str
+    alignment_regs: str
+    cond_evalue: float
+    indp_evalue: float
+    reg_ostats: str
+
+@dataclass
+class StatusLog:
+    """
+    Holds data corresponding to an entry in a Status Log file
+    """
+    entry_id: str
+    status: str
+    error: str
+    description: str
 
 
 @dataclass
