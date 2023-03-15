@@ -292,6 +292,12 @@ class AFDomainID(AFChainID):
             raise ParseError(msg)
 
         return domid
+    
+    @classmethod
+    def from_foldseek_query(cls, raw_query_id: str):
+        if raw_query_id.endswith(".cif"):
+            raw_query_id = raw_query_id.replace('.cif','')
+        return cls.from_str(raw_query_id)
 
     @property
     def af_domain_id(self):
@@ -314,6 +320,22 @@ class LURSummary:
     LUR_perc: float
     LUR_total: int
     residues_total: int
+
+
+@dataclass
+class FoldseekSummary:
+    query: str
+    target: str
+    qstart: int
+    qend: int
+    qlen: int
+    tstart: int
+    tend: int
+    tlen: int
+    qcov: float
+    tcov: float
+    bits: int
+    evalue: float
 
 
 @dataclass
