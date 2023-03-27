@@ -4,6 +4,8 @@ from typing import Optional
 from bson import ObjectId
 from pydantic import BaseModel, Field
 
+from .beacons import UniprotSummary
+
 
 class PyObjectId(ObjectId):  # pragma: no cover
     @classmethod
@@ -38,6 +40,9 @@ class AFFile(BaseModel):  # pragma: no cover
     fragNum: int = Field(..., description="AlphaFold model fragment number, e.g. 1")
     uniprotAccession: str = Field(..., description="UniProt accession, e.g. 'P00520'")
     contents: str = Field(..., description="File contents")
+    uniprot_summary: UniprotSummary = Field(
+        ..., description="UniProt Summary (3D Beacons)"
+    )
 
     class Config:
         use_enum_values = True

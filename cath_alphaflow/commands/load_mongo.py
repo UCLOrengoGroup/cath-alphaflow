@@ -1,28 +1,34 @@
+from datetime import datetime
 import gzip
-import json
 import logging
 import io
-import os
-import tempfile
 import tarfile
 import re
-from typing import Collection, Dict, List
+from typing import Collection, Dict, List, Optional
 from urllib.parse import quote
+from pathlib import Path
 
 import click
 import pymongo
 from pymongo import UpdateOne
+from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 
 from cath_alphaflow.settings import get_default_settings
 from cath_alphaflow.models.mongo import AFFile, AFFileType
+from cath_alphaflow.models import beacons
+from cath_alphaflow.errors import ParseError
 
 LOG = logging.getLogger(__name__)
 
 MONGO_INDEXES = ("dataset", "fileType", "afVersion", "uniprotAccession")
 
 AF_CIF_FILE_RE = re.compile(
-    "AF-(?P<up_accession>[0-9A-Z]+)-F(?P<frag_num>[0-9]+)-model_v(?P<af_version>[0-9]+).cif.gz"
+    "AF-(?P<up_accession>[0-9A-Z]+)-F(?P<frag_num>[0-9]+)-model_v(?P<af_version>[0-9]+)(?P<cif_suffix>\.cif\.gz)"
 )
+
+PROVIDER_ALPHAFOLD = "AlphaFold DB"
+MODEL_URL_STEM = "https://alphafold.ebi.ac.uk/files"
+MODEL_PAGE_URL_STEM = "https://alphafold.ebi.ac.uk/entry"
 
 
 @click.command("load-mongo-archive")
@@ -110,6 +116,12 @@ def yield_archive_file(archive_path, *, dataset) -> AFFile:
         tar_file = tar.extractfile(tarinfo)
         gzip_file = gzip.GzipFile(fileobj=tar_file)
         file_contents = gzip_file.read()
+        gzip_file.seek(0)
+        with gzip_file as fh:
+            uniprot_summary = get_beacons_uniprot_summary_from_af_cif(fh)
+
+        af_id = tarinfo.name
+        up_accession = cif_file_match.group("up_accession")
 
         af_file = AFFile(
             id=tarinfo.name,
@@ -117,11 +129,113 @@ def yield_archive_file(archive_path, *, dataset) -> AFFile:
             fileType=AFFileType.MODEL_CIF,
             afVersion=cif_file_match.group("af_version"),
             fragNum=cif_file_match.group("frag_num"),
-            uniprotAccession=cif_file_match.group("up_accession"),
+            uniprotAccession=up_accession,
             contents=file_contents,
+            uniprot_summary=uniprot_summary,
         )
 
         yield af_file
+
+
+def get_beacons_uniprot_summary_from_af_cif(
+    cif_fh: io.TextIOWrapper,
+) -> beacons.UniprotSummary:
+    """
+    Returns the 3D-Beacons compliant UniprotSummary object from AlphaFold CIF file
+
+    Note: this function relies on metadata and that should be present in all v4 AF files,
+    however they may not be present in files that have been processed.
+    """
+
+    filename = Path(cif_fh.name).name
+
+    cif_file_match = AF_CIF_FILE_RE.match(filename)
+    if not cif_file_match:
+        raise ParseError(f"failed to parse cif filename '{filename}'")
+
+    cif_suffix = cif_file_match.group("cif_suffix")
+    af_id = filename
+    if af_id.endswith(cif_suffix):
+        af_id = af_id[-(len(cif_suffix)) :]
+
+    unp_accession = cif_file_match.group("up_accession")
+
+    cif_dict = MMCIF2Dict(cif_fh)
+
+    # db_accession                 P00520
+    # db_code                      ABL1_MOUSE
+    # db_name                      UNP
+    # gene_name                    Abl1
+    # ncbi_taxonomy_id             10090
+    # organism_scientific          "Mus musculus"
+    # seq_db_align_begin           1
+    # seq_db_align_end             1123
+    # seq_db_isoform               ?
+    # seq_db_sequence_checksum     BD48ADE8557AE95C
+    # seq_db_sequence_version_date 2005-02-15
+    # target_entity_id             1
+
+    # _ma_qa_metric_global.metric_value 64.96
+    global_plddt_score = float(cif_dict["_ma_qa_metric_global.metric_value"][0])
+    unp_start = int(cif_dict["_ma_target_ref_db_details.seq_db_align_begin"][0])
+    unp_end = int(cif_dict["_ma_target_ref_db_details.seq_db_align_end"][0])
+    unp_id = cif_dict["_ma_target_ref_db_details.db_code"][0]
+    unp_checksum = cif_dict["_ma_target_ref_db_details.seq_db_sequence_checksum"][0]
+
+    # not part of 3D Beacons, but might be useful...
+    taxon_id = cif_dict["_ma_target_ref_db_details.ncbi_taxonomy_id"][0]
+    organism = cif_dict["_ma_target_ref_db_details.organism_scientific"][0]
+
+    pdbx_description = cif_dict["_entity.pdbx_description"][0]
+    entry_date = cif_dict["_pdbx_database_status.recvd_initial_deposition_date"][0]
+
+    beacons_summary = beacons.UniprotSummary(
+        uniprot_entry=beacons.UniprotEntry(
+            ac=unp_accession,
+            id=unp_id,
+            uniprot_checksum=unp_checksum,
+            sequence_length=(unp_end - unp_start + 1),
+            segment_start=unp_start,
+            segment_end=unp_end,
+        ),
+        structures=[
+            beacons.Overview(
+                summary=beacons.SummaryItems(
+                    model_identifier=af_id,
+                    model_category=beacons.ModelCategory.AB_INITIO,
+                    model_url=f"{MODEL_URL_STEM}/{af_id}.cif",
+                    model_format=beacons.ModelFormat.MMCIF,
+                    model_type=beacons.ModelType.ATOMIC,
+                    model_page_url=f"{MODEL_PAGE_URL_STEM}/{af_id}",
+                    provider=PROVIDER_ALPHAFOLD,
+                    # number_of_conformers=None,
+                    # ensemble_sample_url=None,
+                    # ensemble_sample_format=None,
+                    created=entry_date,
+                    sequence_identity=100,
+                    uniprot_start=unp_start,
+                    uniprot_end=unp_end,
+                    coverage=100,
+                    experimental_method=beacons.ExperimentalMethod.THEORETICAL_MODEL,
+                    # resolution=None,
+                    confidence_type=beacons.ConfidenceType.pLDDT,
+                    # confidence_version=None,
+                    confidence_avg_local_score=global_plddt_score,
+                    entities=[
+                        beacons.Entity(
+                            entity_type=beacons.EntityType.POLYMER,
+                            entity_poly_type=beacons.EntityPolyType.POLYPEPTIDE_L_,
+                            identifier=unp_accession,
+                            identifier_category=beacons.IdentifierCategory.UNIPROT,
+                            description=pdbx_description,
+                            chain_ids=["A"],
+                        )
+                    ],
+                )
+            )
+        ],
+    )
+    return beacons_summary
 
 
 def run(*, archive_path: str, dataset: str, mongo_db_url: str, batch_size: int):
