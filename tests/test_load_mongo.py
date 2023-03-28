@@ -23,6 +23,8 @@ def test_get_beacons_uniprot_summary_from_af_cif(example_cif_fname, uniprot_id):
 
     cif_path = CIF_DIR / example_cif_fname
     with gzip.open(str(cif_path), "rt") as fh:
-        uniprot_summary = get_beacons_uniprot_summary_from_af_cif(fh)
+        uniprot_summary = get_beacons_uniprot_summary_from_af_cif(
+            fh, filename=example_cif_fname
+        )
         assert isinstance(uniprot_summary, beacons.UniprotSummary)
         assert uniprot_summary.uniprot_entry.ac == uniprot_id
