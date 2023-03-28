@@ -7,7 +7,12 @@ from __future__ import annotations
 from enum import Enum
 from typing import List, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+from pydantic import BaseModel as PyBaseModel
+
+class BaseModel(PyBaseModel):
+    class Config:
+        use_enum_values = True
 
 
 class ConfidenceType(Enum):

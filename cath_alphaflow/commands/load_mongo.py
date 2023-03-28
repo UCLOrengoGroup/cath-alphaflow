@@ -102,6 +102,7 @@ class MongoLoad:
 def yield_archive_file(archive_path, *, dataset) -> AFFile:
     tar = tarfile.open(archive_path)
     for tarinfo in tar:
+
         if not tarinfo.isfile():
             LOG.debug(f"archive entry '{tarinfo.name}' is not a valid file (skipping)")
             continue
@@ -113,20 +114,29 @@ def yield_archive_file(archive_path, *, dataset) -> AFFile:
             )
             continue
 
+        LOG.info(f"Working on CIF file: {tarinfo.name}")
+        
         tar_file = tar.extractfile(tarinfo)
         gzip_file = gzip.GzipFile(fileobj=tar_file)
         file_contents = gzip_file.read()
         gzip_file.seek(0)
-        with gzip_file as fh:
-            uniprot_summary = get_beacons_uniprot_summary_from_af_cif(fh)
+       
+        text_fh = io.TextIOWrapper(gzip_file)
 
-        af_id = tarinfo.name
+        try:
+            uniprot_summary = get_beacons_uniprot_summary_from_af_cif(text_fh, filename=tarinfo.name)
+        except Exception as err:
+            msg = f"failed to parse UniprotSummary from {tarinfo.name}: {err}"
+            LOG.error(msg)
+            raise
+
+
         up_accession = cif_file_match.group("up_accession")
 
         af_file = AFFile(
-            id=tarinfo.name,
-            dataset=dataset,
+            fileName=tarinfo.name,
             fileType=AFFileType.MODEL_CIF,
+            dataset=dataset,
             afVersion=cif_file_match.group("af_version"),
             fragNum=cif_file_match.group("frag_num"),
             uniprotAccession=up_accession,
@@ -139,6 +149,7 @@ def yield_archive_file(archive_path, *, dataset) -> AFFile:
 
 def get_beacons_uniprot_summary_from_af_cif(
     cif_fh: io.TextIOWrapper,
+    filename: str,
 ) -> beacons.UniprotSummary:
     """
     Returns the 3D-Beacons compliant UniprotSummary object from AlphaFold CIF file
@@ -146,8 +157,6 @@ def get_beacons_uniprot_summary_from_af_cif(
     Note: this function relies on metadata and that should be present in all v4 AF files,
     however they may not be present in files that have been processed.
     """
-
-    filename = Path(cif_fh.name).name
 
     cif_file_match = AF_CIF_FILE_RE.match(filename)
     if not cif_file_match:
@@ -258,13 +267,13 @@ def run(*, archive_path: str, dataset: str, mongo_db_url: str, batch_size: int):
 
         total = incr = 0
 
-        LOG.info(f"AF Model file: {af_file}")
+        af_file_dict = af_file.dict()
 
-        af_file_dict: dict = af_file.dict()
+        LOG.info(f"AF Model file: {af_file}")
 
         lm.data.append(
             UpdateOne(
-                {"_id": af_file_dict.get("_id")}, {"$set": af_file_dict}, upsert=True
+                af_file.get_unique_dict(), {"$set": af_file_dict}, upsert=True
             )
         )
         incr += 1
