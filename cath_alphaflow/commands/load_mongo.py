@@ -113,6 +113,10 @@ class MongoLoad:
 
 
 class AFArchiveFile(pydantic.BaseModel):
+    """
+    Represents a single file in the AlphaFold tar archive
+    """
+
     filename: str
     tarfile: io.BytesIO
 
@@ -127,9 +131,9 @@ def yield_next_file_from_archive(archive_path) -> AFArchiveFile:
             LOG.debug(f"archive entry '{tarinfo.name}' is not a valid file (skipping)")
             continue
 
-        tarfile = tar.extractfile(tarinfo)
+        _tarfile = tar.extractfile(tarinfo)
 
-        yield AFArchiveFile(filename=tarinfo.name, tarfile=tarfile)
+        yield AFArchiveFile(filename=tarinfo.name, tarfile=_tarfile)
 
 
 def make_af_file(
