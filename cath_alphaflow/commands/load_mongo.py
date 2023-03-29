@@ -131,6 +131,13 @@ def yield_next_file_from_archive(archive_path) -> AFArchiveFile:
             LOG.debug(f"archive entry '{tarinfo.name}' is not a valid file (skipping)")
             continue
 
+        cif_file_match = AF_CIF_FILE_RE.match(tarinfo.name)
+        if not cif_file_match:
+            LOG.debug(
+                f"archive entry '{tarinfo.name}' does not match expected file name (skipping)"
+            )
+            continue
+
         tarfileobj = tar.extractfile(tarinfo)
 
         yield AFArchiveFile(filename=tarinfo.name, tarfileobj=tarfileobj)
@@ -145,7 +152,7 @@ def make_af_file(
 
     cif_file_match = AF_CIF_FILE_RE.match(filename)
     if not cif_file_match:
-        msg = f"archive entry '{filename}' does not match expected file name (skipping)"
+        msg = f"archive entry '{filename}' does not match expected file name"
         raise ParseError(msg)
 
     gzip_file = gzip.GzipFile(fileobj=tarfileobj)
