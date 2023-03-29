@@ -175,7 +175,7 @@ def make_af_file(
         uniprot_summary=uniprot_summary,
     )
 
-    yield af_file
+    return af_file
 
 
 def get_beacons_uniprot_summary_from_af_cif(
