@@ -118,7 +118,7 @@ class AFArchiveFile(pydantic.BaseModel):
     """
 
     filename: str
-    tarfile: io.BytesIO
+    tarfileobj: tarfile.ExFileObject
 
     class Config:  # pylint: disable=missing-class-docstring
         arbitrary_types_allowed = True
@@ -131,14 +131,14 @@ def yield_next_file_from_archive(archive_path) -> AFArchiveFile:
             LOG.debug(f"archive entry '{tarinfo.name}' is not a valid file (skipping)")
             continue
 
-        _tarfile = tar.extractfile(tarinfo)
+        tarfileobj = tar.extractfile(tarinfo)
 
-        yield AFArchiveFile(filename=tarinfo.name, tarfile=_tarfile)
+        yield AFArchiveFile(filename=tarinfo.name, tarfileobj=tarfileobj)
 
 
 def make_af_file(
     *,
-    tarfile,
+    tarfileobj,
     filename,
     dataset,
 ) -> AFFile:
@@ -148,7 +148,7 @@ def make_af_file(
         msg = f"archive entry '{filename}' does not match expected file name (skipping)"
         raise ParseError(msg)
 
-    gzip_file = gzip.GzipFile(fileobj=tarfile)
+    gzip_file = gzip.GzipFile(fileobj=tarfileobj)
     file_contents = gzip_file.read()
     gzip_file.seek(0)
 
@@ -306,7 +306,7 @@ def run(
     for af_archive_file in yield_next_file_from_archive(archive_path=archive_path):
 
         af_filename = af_archive_file.filename
-        af_tarfile = af_archive_file.tarfile
+        af_tarfileobj = af_archive_file.tarfileobj
 
         total = incr = 0
 
@@ -318,7 +318,7 @@ def run(
                 continue
 
         af_file = make_af_file(
-            tarfile=af_tarfile, filename=af_filename, dataset=dataset
+            tarfileobj=af_tarfileobj, filename=af_filename, dataset=dataset
         )
 
         af_file_dict = af_file.dict()
