@@ -10,6 +10,7 @@ from pathlib import Path
 
 import click
 import pymongo
+import pydantic
 from pymongo import UpdateOne
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 
@@ -26,6 +27,7 @@ AF_CIF_FILE_RE = re.compile(
     "AF-(?P<up_accession>[0-9A-Z]+)-F(?P<frag_num>[0-9]+)-model_v(?P<af_version>[0-9]+)(?P<cif_suffix>\.cif\.gz)"
 )
 
+DEFAULT_BATCH_SIZE = 50
 PROVIDER_ALPHAFOLD = "AlphaFold DB"
 MODEL_URL_STEM = "https://alphafold.ebi.ac.uk/files"
 MODEL_PAGE_URL_STEM = "https://alphafold.ebi.ac.uk/entry"
@@ -53,13 +55,23 @@ MODEL_PAGE_URL_STEM = "https://alphafold.ebi.ac.uk/entry"
 @click.option(
     "-b",
     "--batch-size",
-    help="Number of documents to load in a batch, default 1000",
-    required=False,
-    default=1000,
+    help=f"Number of documents to load in a batch [default: {DEFAULT_BATCH_SIZE}]",
+    default=DEFAULT_BATCH_SIZE,
     type=int,
 )
+@click.option(
+    "--force-overwrite",
+    is_flag=True,
+    help="Whether or not to overwrite an existing file MongoDB [default: False]",
+    default=False,
+    type=bool,
+)
 def load_af_from_archive(
-    mongo_db_url: str, archive_path: str, dataset: str, batch_size: int
+    mongo_db_url: str,
+    archive_path: str,
+    dataset: str,
+    batch_size: int,
+    force_overwrite: bool,
 ):  # pragma: no cover
 
     settings = get_default_settings()
@@ -76,6 +88,7 @@ def load_af_from_archive(
         mongo_db_url=mongo_db_url,
         dataset=dataset,
         batch_size=batch_size,
+        force_overwrite=force_overwrite,
     )
 
 
@@ -99,52 +112,66 @@ class MongoLoad:
         self.collection.create_index(self.key_fields)
 
 
-def yield_archive_file(archive_path, *, dataset) -> AFFile:
+class AFArchiveFile(pydantic.BaseModel):
+    filename: str
+    tarfile: io.BytesIO
+
+    class Config:  # pylint: disable=missing-class-docstring
+        arbitrary_types_allowed = True
+
+
+def yield_next_file_from_archive(archive_path) -> AFArchiveFile:
     tar = tarfile.open(archive_path)
     for tarinfo in tar:
-
         if not tarinfo.isfile():
             LOG.debug(f"archive entry '{tarinfo.name}' is not a valid file (skipping)")
             continue
 
-        cif_file_match = AF_CIF_FILE_RE.match(tarinfo.name)
-        if not cif_file_match:
-            LOG.debug(
-                f"archive entry '{tarinfo.name}' does not match expected file name (skipping)"
-            )
-            continue
+        tarfile = tar.extractfile(tarinfo)
 
-        LOG.info(f"Working on CIF file: {tarinfo.name}")
-        
-        tar_file = tar.extractfile(tarinfo)
-        gzip_file = gzip.GzipFile(fileobj=tar_file)
-        file_contents = gzip_file.read()
-        gzip_file.seek(0)
-       
-        text_fh = io.TextIOWrapper(gzip_file)
-
-        try:
-            uniprot_summary = get_beacons_uniprot_summary_from_af_cif(text_fh, filename=tarinfo.name)
-        except Exception as err:
-            msg = f"failed to parse UniprotSummary from {tarinfo.name}: {err}"
-            LOG.error(msg)
-            raise
+        yield AFArchiveFile(filename=tarinfo.name, tarfile=tarfile)
 
 
-        up_accession = cif_file_match.group("up_accession")
+def make_af_file(
+    *,
+    tarfile,
+    filename,
+    dataset,
+) -> AFFile:
 
-        af_file = AFFile(
-            fileName=tarinfo.name,
-            fileType=AFFileType.MODEL_CIF,
-            dataset=dataset,
-            afVersion=cif_file_match.group("af_version"),
-            fragNum=cif_file_match.group("frag_num"),
-            uniprotAccession=up_accession,
-            contents=file_contents,
-            uniprot_summary=uniprot_summary,
+    cif_file_match = AF_CIF_FILE_RE.match(filename)
+    if not cif_file_match:
+        msg = f"archive entry '{filename}' does not match expected file name (skipping)"
+        raise ParseError(msg)
+
+    gzip_file = gzip.GzipFile(fileobj=tarfile)
+    file_contents = gzip_file.read()
+    gzip_file.seek(0)
+
+    text_fh = io.TextIOWrapper(gzip_file)
+    try:
+        uniprot_summary = get_beacons_uniprot_summary_from_af_cif(
+            text_fh, filename=filename
         )
+    except Exception as err:
+        msg = f"failed to parse UniprotSummary from {filename}: {err}"
+        LOG.error(msg)
+        raise
 
-        yield af_file
+    up_accession = cif_file_match.group("up_accession")
+
+    af_file = AFFile(
+        fileName=filename,
+        fileType=AFFileType.MODEL_CIF,
+        dataset=dataset,
+        afVersion=cif_file_match.group("af_version"),
+        fragNum=cif_file_match.group("frag_num"),
+        uniprotAccession=up_accession,
+        contents=file_contents,
+        uniprot_summary=uniprot_summary,
+    )
+
+    yield af_file
 
 
 def get_beacons_uniprot_summary_from_af_cif(
@@ -247,7 +274,14 @@ def get_beacons_uniprot_summary_from_af_cif(
     return beacons_summary
 
 
-def run(*, archive_path: str, dataset: str, mongo_db_url: str, batch_size: int):
+def run(
+    *,
+    archive_path: str,
+    dataset: str,
+    mongo_db_url: str,
+    batch_size: int,
+    force_overwrite: bool = False,
+):
     """Load AlphaFold tar archive model files into MONGO
 
     Args:
@@ -255,6 +289,8 @@ def run(*, archive_path: str, dataset: str, mongo_db_url: str, batch_size: int):
         mongo_db_url (str): Mongo DB URL
         dataset (str): Name to associate with these files
         batch_size (int): Number of documents to batch in a single commit
+        force_overwrite (bool): Whether to overwrite existing documents
+
     """
 
     lm = MongoLoad()
@@ -263,17 +299,33 @@ def run(*, archive_path: str, dataset: str, mongo_db_url: str, batch_size: int):
     lm.init_collection(mongo_db_url)
 
     LOG.info(f"Loading all model files from {archive_path}")
-    for af_file in yield_archive_file(archive_path=archive_path, dataset=dataset):
+    for af_archive_file in yield_next_file_from_archive(archive_path=archive_path):
+
+        af_filename = af_archive_file.filename
+        af_tarfile = af_archive_file.tarfile
 
         total = incr = 0
 
+        unique_criteria = {"dataset": dataset, "fileName": af_filename}
+
+        if not force_overwrite:
+            if lm.collection.find_one(unique_criteria):
+                LOG.info(f"Skipping {af_filename} as it already exists")
+                continue
+
+        af_file = make_af_file(
+            tarfile=af_tarfile, filename=af_filename, dataset=dataset
+        )
+
         af_file_dict = af_file.dict()
 
-        LOG.info(f"AF Model file: {af_file}")
+        LOG.info(f"Adding AF Model: {af_file}")
 
         lm.data.append(
             UpdateOne(
-                af_file.get_unique_dict(), {"$set": af_file_dict}, upsert=True
+                unique_criteria,
+                {"$set": af_file_dict},
+                upsert=True,
             )
         )
         incr += 1
@@ -284,10 +336,10 @@ def run(*, archive_path: str, dataset: str, mongo_db_url: str, batch_size: int):
             lm.data.clear()
             LOG.info(f"Loading done: {incr} documents")
 
-        if lm.data:
-            lm.load()
-            LOG.info(f"Loading done: {incr} documents")
+    if lm.data:
+        lm.load()
+        LOG.info(f"Loading done: {incr} documents")
 
-    lm.create_index()
+    # lm.create_index()
 
     return 0
