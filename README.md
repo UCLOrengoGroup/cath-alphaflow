@@ -150,3 +150,7 @@ An html html report with plotly summaries of processes:
 ```
 ./nextflow run workflows/cath-test-workflow.nf -with-report cath-test-workflow-plots.html
 ```
+A TSV type text file that shows a list of all the processes run, runtime, cpu, memory usage etc:
+```
+./nextflow run workflows/cath-test-workflow.nf -with-trace
+```
