@@ -75,7 +75,7 @@ def convert_cif_to_dssp(
         af_chain_id = None
         chopping = None
         if id_type == ID_TYPE_UNIPROT_DOMAIN:
-            af_id = AFDomainID.from_uniprot_str(af_id_str, version=af_version)
+            af_domain_id = AFDomainID.from_uniprot_str(af_id_str, version=af_version)
             af_chain_id = af_domain_id.af_chain_id
             chopping = af_domain_id.chopping
         elif id_type == ID_TYPE_AF_DOMAIN:
