@@ -133,6 +133,7 @@ process create_dssp {
 
     input:
     path 'ids.csv'
+    val id_type
     path cif_files
 
     output:
@@ -143,6 +144,7 @@ process create_dssp {
     cath-af-cli convert-cif-to-dssp \
         --cif_in_dir . \
         --id_file manually_created_ids.csv \
+        --id_type ${id_type} \
         --cif_suffix .cif \
         --dssp_out_dir .
     """
@@ -150,21 +152,26 @@ process create_dssp {
 
 
 process create_sse_summary {
+
+    // HACK: 
+    // This currently expects to find DSSP files in $publish_dir which goes
+    // against best practices. If anyone can think of a neat way to coordinate 
+    // the domain/chain id streams without this hack, then please change.  
+
     input:
-    val domain_ids
-    path dssp_files
+    path 'af_ids_csv'
+    path dssp_dir
 
     output:
     path 'dssp_summary.csv'
 
     """
-    echo ${domain_ids} > af_ids_csv
     cath-af-cli convert-dssp-to-sse-summary \
-        --dssp_dir . \
+        --dssp_dir ${dssp_dir} \
         --id_file af_ids_csv \
         --id_type af \
         --sse_out_file dssp_summary.csv \
-        --dssp_check_policy=error
+        --dssp_check_policy=skip
     """
 }
 
@@ -177,16 +184,15 @@ process create_plddt_summary {
 
     input:
     path 'af_ids_csv'
-    path _chain_cif_files_list
+    path cif_dir
 
     output:
     path params.plddt_stats_fn
 
     """
     # HACK
-    CIF_DIR='${params.publish_dir}/${params.af_cif_raw_dir}'
     cath-af-cli convert-cif-to-plddt-summary \
-        --cif_in_dir \$CIF_DIR \
+        --cif_in_dir ${cif_dir} \
         --id_file af_ids_csv \
         --plddt_stats_file ${params.plddt_stats_fn}
     """
@@ -293,6 +299,9 @@ workflow AF_ANNOTATE_DOMAINS_CIF {
         def _plddt_file = file("${params.publish_dir}/${params.plddt_stats_fn}")
         def _sse_summary_file = file("${params.publish_dir}/${params.sse_summary_fn}")
 
+        def cif_dir = file("${params.publish_dir}/${params.af_cif_raw_dir}")
+        def dssp_dir = file("${params.publish_dir}/${params.af_dssp_raw_dir}")
+
         def af_chain_ids_ch = chain_ids_from_cif_files(af_chain_cif_files_ch)
         def af_domain_ids_ch = domain_ids_from_cif_files(af_domain_cif_files_ch)
 
@@ -302,7 +311,7 @@ workflow AF_ANNOTATE_DOMAINS_CIF {
 
         // def uniprot_dataset = create_cath_dataset_from_files(uniprot_csv_ch, all_crh, all_af_uniprot_md5)
 
-        def chain_dssp_files_ch = create_dssp(af_chain_ids_ch, af_chain_cif_files_ch)
+        def chain_dssp_files_ch = create_dssp(af_chain_ids_ch, 'af_chain', af_chain_cif_files_ch)
 
         // HACK:
         // simplest way to proceed here is to finish creating all the DSSP files
@@ -314,12 +323,13 @@ workflow AF_ANNOTATE_DOMAINS_CIF {
         // However, this metadata is not present in the domain CIF file after chopping. 
         // So, while this process needs to take the AF domain IDs as input, it also needs 
         // to be given the CHAIN CIF files and a chopping (rather than the DOMAIN CIF files)
-        def plddt_summary_ch = create_plddt_summary(af_domain_ids_ch, all_chain_dssp_files)
+        def plddt_summary_ch = create_plddt_summary(af_domain_ids_ch, cif_dir)
         
         // we now need to combine the channels so that we get dssp files with the same
         // uniprot ids as the dssp files
 
-        def sse_summary_ch = create_sse_summary(af_domain_ids_ch, all_chain_dssp_files)
+        def sse_summary_ch = create_sse_summary(af_domain_ids_ch, dssp_dir)
+        // def sse_summary_ch = create_sse_summary(af_domain_ids_ch, all_chain_dssp_files)
         sse_summary_ch.collectFile(name: _sse_summary_file)
 
         // TODO:

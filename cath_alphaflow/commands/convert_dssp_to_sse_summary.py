@@ -113,8 +113,8 @@ def convert_dssp_to_sse_summary(
                 acc_id=acc_id,
                 chopping=chopping,
             )
-        except ParseError:
-            msg = f"failed to get SSE summary for entry {acc_id}"
+        except (FileNotFoundError, ParseError) as err:
+            msg = f"failed to get SSE summary for entry {acc_id} [err: {err}] "
             if dssp_check_policy == FILE_POLICY_SKIP:
                 LOG.warning(f"{msg} (skipping)")
                 continue

@@ -14,7 +14,7 @@ git clone https://github.com/UCLOrengoGroup/cath-alphaflow.git
 #venv setup, install dependencies
 python3 -m venv ${CATH_VENV_PATH}
 . ${CATH_VENV_PATH}/bin/activate
-pip install --upgrade pip wheel pytest nextflow
+pip install --upgrade pip wheel pytest nextflow pydantic pymongo
 
 #get gcloud utils
 mkdir -p ${CATH_GCLOUD}
