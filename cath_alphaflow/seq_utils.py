@@ -59,3 +59,16 @@ def combine_fasta_files(fasta_in_dir, fasta_out_file):
             if fasta_file.suffix in [".fasta", ".fa"]:
                 for seq_record in SeqIO.parse(fasta_file, "fasta"):
                     SeqIO.write(seq_record, fasta_out_fh, "fasta")
+
+def get_local_plddt_for_res(
+    structure,
+    residue_num: int,
+    *,
+    model_num: int = 0,
+    chain_id: str = "A",
+    atom_type: str = "CA",
+):
+    """
+    Returns the local pLDDT score for a given residue
+    """
+    return structure[model_num][chain_id][residue_num][atom_type].get_bfactor()

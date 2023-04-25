@@ -12,6 +12,7 @@ from cath_alphaflow.models.domains import AFDomainID, Segment, Chopping
 from cath_alphaflow.errors import NoMatchingResiduesError
 from cath_alphaflow.io_utils import get_status_log_dictwriter
 from cath_alphaflow.constants import STATUS_LOG_SUCCESS,STATUS_LOG_FAIL
+from cath_alphaflow.seq_utils import get_local_plddt_for_res
 
 LOG = logging.getLogger()
 
@@ -132,21 +133,6 @@ def optimise_domain_boundaries(
         )
 
     click.echo("DONE")
-
-
-def get_local_plddt_for_res(
-    structure,
-    residue_num: int,
-    *,
-    model_num: int = 0,
-    chain_id: str = "A",
-    atom_type: str = "CA",
-):
-    """
-    Returns the local pLDDT score for a given residue
-    """
-    return structure[model_num][chain_id][residue_num][atom_type].get_bfactor()
-
 
 def cut_segment(
     structure, segment_to_cut: Segment, cutoff_plddt_score, cut_start, cut_end
