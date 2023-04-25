@@ -32,7 +32,7 @@ jobs:
         pip install -e .
     - name: Install Foldseek
       run: |
-        wget https://mmseqs.com/foldseek/foldseek-linux-sse41.tar.gz; tar xvzf foldseek-linux-sse41.tar.gz
+        wget https://mmseqs.com/foldseek/foldseek-linux-sse2.tar.gz; tar xvzf foldseek-linux-sse2.tar.gz
         echo "${HOME}/foldseek/bin" > $GITHUB_PATH
     - name: Lint with flake8
       run: |
