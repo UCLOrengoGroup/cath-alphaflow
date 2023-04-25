@@ -10,7 +10,7 @@ LOG = logging.getLogger()
 PK_COLNAME = "uniprot_domain_id"
 
 
-@click.command("combine-results")
+@click.command("merge-results")
 @click.option(
     "--id_file",
     type=click.File("rt"),
@@ -31,7 +31,7 @@ PK_COLNAME = "uniprot_domain_id"
 )
 @click.option(
     "--results_file",
-    type=click.Path(exists=True, file_okay=True, dir_okay=False, resolve_path=True),
+    type=click.Path(exists=False, file_okay=True, dir_okay=False, resolve_path=True),
     required=True,
     help="Output: combined results file",
 )
@@ -43,6 +43,7 @@ PK_COLNAME = "uniprot_domain_id"
 def merge_results_command(
     id_file,
     uniprot_md5_file,
+    cath_annotation_file,
     dataset_file,
     results_file,
     af_version,
@@ -50,7 +51,10 @@ def merge_results_command(
     "Merge results into a single spreadsheet"
 
     merger = ResultsMerger(
-        id_file=id_file, uniprot_md5_file=uniprot_md5_file, dataset_file=dataset_file
+        id_file=id_file,
+        uniprot_md5_file=uniprot_md5_file,
+        dataset_file=dataset_file,
+        cath_annotation_file=cath_annotation_file,
     )
     df = merger.get_merged_df()
     df.to_csv(results_file)
@@ -73,10 +77,13 @@ class ResultsMerger:
     Merges columns from the equivalent rows in various files
     """
 
-    def __init__(self, *, id_file, uniprot_md5_file, dataset_file):
+    def __init__(
+        self, *, id_file, uniprot_md5_file, cath_annotation_file, dataset_file
+    ):
         self.id_file = id_file
         self.uniprot_md5_file = uniprot_md5_file
         self.dataset_file = dataset_file
+        self.cath_annotation_file = cath_annotation_file
 
     def get_merged_df(self):
         id_df = self.get_id_df()
