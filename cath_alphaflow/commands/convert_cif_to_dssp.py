@@ -3,8 +3,14 @@ from pathlib import Path
 import click
 import subprocess
 from cath_alphaflow.io_utils import yield_first_col
-from cath_alphaflow.models.domains import AFDomainID
-from cath_alphaflow.constants import DEFAULT_CIF_SUFFIX, DEFAULT_DSSP_SUFFIX,ID_TYPE_AF_DOMAIN,ID_TYPE_UNIPROT_DOMAIN
+from cath_alphaflow.models.domains import AFDomainID, AFChainID
+from cath_alphaflow.constants import (
+    DEFAULT_CIF_SUFFIX,
+    DEFAULT_DSSP_SUFFIX,
+    ID_TYPE_AF_DOMAIN,
+    ID_TYPE_UNIPROT_DOMAIN,
+    ID_TYPE_AF_CHAIN,
+)
 from cath_alphaflow.settings import get_default_settings
 from cath_alphaflow.errors import ArgumentError
 
@@ -33,7 +39,7 @@ LOG = logging.getLogger()
 )
 @click.option(
     "--id_type",
-    type=click.Choice([ID_TYPE_AF_DOMAIN, ID_TYPE_UNIPROT_DOMAIN]),
+    type=click.Choice([ID_TYPE_AF_DOMAIN, ID_TYPE_UNIPROT_DOMAIN, ID_TYPE_AF_CHAIN]),
     default=ID_TYPE_AF_DOMAIN,
     help=f"Option: specify the type of ID to specify the chopping [{ID_TYPE_AF_DOMAIN}]",
 )
@@ -60,25 +66,33 @@ LOG = logging.getLogger()
     required=True,
     help="Output: DSSP Output Folder",
 )
-def convert_cif_to_dssp(cif_in_dir, id_file, id_type,af_version, cif_suffix, dssp_suffix, dssp_out_dir):
+def convert_cif_to_dssp(
+    cif_in_dir, id_file, id_type, af_version, cif_suffix, dssp_suffix, dssp_out_dir
+):
     "Converts CIF to DSSP files"
 
-    for af_domain_id_str in yield_first_col(id_file):
+    for af_id_str in yield_first_col(id_file):
+        af_chain_id = None
+        chopping = None
         if id_type == ID_TYPE_UNIPROT_DOMAIN:
-            af_domain_id = AFDomainID.from_uniprot_str(
-                af_domain_id_str, version=af_version
-            )
+            af_id = AFDomainID.from_uniprot_str(af_id_str, version=af_version)
+            af_chain_id = af_domain_id.af_chain_id
+            chopping = af_domain_id.chopping
         elif id_type == ID_TYPE_AF_DOMAIN:
-            af_domain_id = AFDomainID.from_str(af_domain_id_str)
+            af_domain_id = AFDomainID.from_str(af_id_str)
+            af_chain_id = af_domain_id.af_chain_id
+            chopping = af_domain_id.chopping
+        elif id_type == ID_TYPE_AF_CHAIN:
+            af_chain_id = AFChainID.from_str(af_id_str)
         else:
             msg = f"failed to understand id_type '${id_type}'"
             raise ArgumentError(msg)
 
-        file_stub = af_domain_id.af_chain_id
-        chopping = af_domain_id.chopping
+        file_stub = af_chain_id
 
         cif_path = Path(cif_in_dir) / f"{file_stub}{cif_suffix}"
-        dssp_path = Path(dssp_out_dir) / (file_stub + dssp_suffix)
+        dssp_path = Path(dssp_out_dir) / f"{file_stub}{dssp_suffix}"
+
         LOG.debug(f"Running DSSP: {cif_path} {dssp_path}")
         run_dssp(cif_path, dssp_path)
 
