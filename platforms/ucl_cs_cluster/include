@@ -21,3 +21,16 @@ source /share/apps/source_files/python/python-3.9.5.source
 export PATH=/share/apps/java/bin:${PATH}
 export PATH=${CATH_GCLOUD}/google-cloud-sdk/bin:${PATH}
 
+#source oracle database login details if present
+#should be of the form:
+#export ORACLE_DB_HOST="<host>"
+#export ORACLE_DB_PORT=<port>
+#export ORACLE_DB_SID="<sid>"
+#export ORACLE_DB_USERNAME="<username>"
+#export ORACLE_DB_PASSWORD="<password>"
+
+MY_ORACLE_SETTINGS="~/.my_oracle_settings"
+if [[ -f ${MY_ORACLE_SETTINGS} ]]
+then
+    source ${MY_ORACLE_SETTINGS}
+fi
