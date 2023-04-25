@@ -16,6 +16,7 @@ from .commands import chop_domain
 from .commands import create_md5
 from .commands import convert_cif_to_fasta
 from .commands import load_mongo
+from .commands import merge_results
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s"
@@ -65,3 +66,4 @@ cli.add_command(chop_domain.chop_cif_command)
 cli.add_command(create_md5.create_md5)
 cli.add_command(convert_cif_to_fasta.convert_cif_to_fasta)
 cli.add_command(load_mongo.load_af_from_archive)
+cli.add_command(merge_results.merge_results_command)
