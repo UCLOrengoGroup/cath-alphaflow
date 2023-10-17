@@ -10,6 +10,7 @@ from typing import List, Optional, Union
 from pydantic import Field
 from pydantic import BaseModel as PyBaseModel
 
+
 class BaseModel(PyBaseModel):
     class Config:
         use_enum_values = True
@@ -429,13 +430,9 @@ class Chain(BaseModel):
     segments: Optional[List[Segment]] = Field(None, title="Segments")
 
 
-class Chains(BaseModel):
-    __root__: List[Chain] = Field(..., title="Chains")
-
-
 class Detailed(BaseModel):
     summary: SummaryItems
-    chains: Chains
+    chains: List[Chain] = Field(..., title="Chains")
 
 
 class Overview(BaseModel):
