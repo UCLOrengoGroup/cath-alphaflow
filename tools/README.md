@@ -4,10 +4,10 @@ Install Chainsaw
 cd tools
 git clone git@github.com:JudeWells/chainsaw.git
 cd chainsaw
-python3 -m venv venv
+python3.8 -m venv venv
 . venv/bin/activate
 pip install --upgrade pip wheel
-pip install -r requirements
+pip install -r requirements.txt
 ```
 
 Install Merizo
@@ -16,10 +16,10 @@ Install Merizo
 cd tools
 git clone https://github.com/psipred/Merizo.git
 cd Merizo
-python3 -m venv venv
+python3.8 -m venv venv
 . venv/bin/activate
 pip install --upgrade pip wheel
-pip install -r requirements
+pip install -r requirements.txt
 ```
 
 Install UniDoc
@@ -27,5 +27,6 @@ Install UniDoc
 ```
 cd tools
 wget http://yanglab.nankai.edu.cn/UniDoc/download/UniDoc.tgz
-tar zxvf UniDoc.tgz
+mv UniDoc.tgz UniDoc.tar
+tar xvf UniDoc.tar
 ```
