@@ -12,6 +12,9 @@ params.af_version = 4
 // params.af_archive_root = "/cluster/ref3/alphafolddb/proteomes"
 params.proteome_zip_file = "${workflow.launchDir}/tests/fixtures/zipfiles/proteome-tax_id-2025159-0_v4.zip"
 params.uniprot_csv_file = "${workflow.launchDir}/tests/fixtures/dataset100/dataset100.uniprot_ids.csv"
+params.uniprot_domain_ids_file = "${workflow.launchDir}/tests/fixtures/dataset100/dataset100.uniprot_domain_ids.csv"
+// params.afid_chopping_file = "${workflow.launchDir}/tests/fixtures/dataset100/dataset100.afid_chopping.csv"
+params.afid_chopping_file = "${workflow.launchDir}/zipfiles.00000001.results.head.csv"
 params.tools_root = "${workflow.launchDir}/tools"
 params.af_archive_root = "${workflow.launchDir}/datasets/chainsaw"
 params.chainsaw_dir = "${params.tools_root}/chainsaw"
@@ -22,6 +25,23 @@ params.unidoc_dir = "${params.tools_root}/UniDoc"
 params.unidoc_script = "${params.unidoc_dir}/Run_UniDoc_from_scratch_structure.py"
 params.alphafold_url_stem = "https://alphafold.ebi.ac.uk/files"
 
+
+include { chop_pdb as CHOP_CIF } from './cath-shared-core'
+
+
+process uniprot_domain_id_to_af_id {
+    input:
+    path 'uniprot_domain_ids.csv'
+
+    output:
+    path 'af_ids.csv'
+
+    """
+    cat uniprot_domain_ids.csv | tr '/' ' ' | \
+        perl -ne '(\$id, \$ch) = split(/\s+/, \$_); print("AF-\$id-F1-model_v4 \$ch")' > af_ids.csv
+    """
+}
+
 process cif_files_from_web {
     input:
     path 'af_ids.txt'
@@ -30,7 +50,20 @@ process cif_files_from_web {
     path 'AF-*.cif'
 
     """
-    awk '{print "${params.alphafold_url_stem}/"\$1".cif"}' af_ids.txt > af_model_urls.txt
+    cat af_ids.txt | tr '/' ' ' | awk '{print "${params.alphafold_url_stem}/"\$1".cif"}' > af_model_urls.txt
+    wget -i af_model_urls.txt || true
+    """
+}
+
+process pdb_files_from_web {
+    input:
+    path 'af_ids.txt'
+
+    output:
+    path 'AF-*.pdb'
+
+    """
+    awk '{print "${params.alphafold_url_stem}/"\$1".pdb"}' af_ids.txt > af_model_urls.txt
     wget -i af_model_urls.txt || true
     """
 }
@@ -136,22 +169,6 @@ process run_merizo {
     """
 }
 
-process run_measure_globularity {
-    input:
-    path 'af_domain_list.csv'
-    path '*.cif'
-
-    output:
-    path 'af_domain_globularity.csv'
-
-    """
-    cath-af-cli measure-globularity \
-        --af_domain_list af_domain_list.csv \
-        --af_chain_mmcif_dir . \
-        --af_domain_globularity af_domain_globularity.csv \
-    """
-}
-
 process run_unidoc {
     input:
     path '*'
@@ -177,86 +194,133 @@ process run_unidoc {
     """
 }
 
-process merge_domain_results {
+process run_plddt_summary {
     input:
-    file 'id_file.tsv'
-    file 'chainsaw_results.tsv'
-    file 'merizo_results.tsv'
-    file 'unidoc_results.tsv'
+    path 'af_domain_list.csv'
+    path '*'
 
     output:
-    file 'all_results.tsv'
+    path 'plddt_summary.csv'
 
     """
-    cath-af-cli merge-domain-results \
-        -i id_file.tsv \
-        -c chainsaw_results.tsv \
-        -m merizo_results.tsv \
-        -u unidoc_results.tsv \
-        -o all_results.tsv
+    find -L . -name '*.cif' | sed 's/^\\.\\///' | sed 's/\\.cif//g' > cif_ids.txt
+    echo "af_domain_id" > af_domain_list_files_present.csv
+    grep -F -f cif_ids.txt af_domain_list.csv >> af_domain_list_files_present.csv
+    cath-af-cli convert-cif-to-plddt-summary \
+        --id_file af_domain_list_files_present.csv \
+        --id_type af \
+        --cif_in_dir . \
+        --plddt_stats_file plddt_summary.csv
+    
+    """
+}
+
+
+process run_globularity_summary {
+    input:
+    path 'af_domain_list.csv'
+    path '*'
+
+    output:
+    path 'globularity_summary.csv'
+
+    """
+    find -L . -name '*.cif' | sed 's/^\\.\\///' | sed 's/\\.cif//g' > cif_ids.txt
+    echo "af_domain_id" > af_domain_list_files_present.csv
+    grep -F -f cif_ids.txt af_domain_list.csv >> af_domain_list_files_present.csv
+    cath-af-cli measure-globularity \
+        --af_domain_list af_domain_list_files_present.csv \
+        --af_chain_mmcif_dir . \
+        --af_domain_globularity globularity_summary.csv
+    """
+}
+
+process merge_results {
+    input:
+    file 'id_file.tsv'
+    // file 'uniprot_md5_file.tsv'
+    file 'globularity_results.tsv'
+    file 'plddt_results.tsv'
+
+    output:
+    file 'combined_results.tsv'
+
+    """
+    cath-af-cli merge-results \
+        --id_file id_file.tsv \
+        --glob_file globularity_results.tsv \
+        --plddt_file plddt_results.tsv \
+        --results_file combined_results.tsv
+    """
+}
+
+
+process af_domain_ids_from_chopping_file {
+    input:
+    file 'chopping_file.csv'
+
+    output:
+    file 'af_domain_ids.csv'
+
+    // chain_id        sequence_md5    nres    ndom    chopping        uncertainty
+    // AF-A0A1N7SYI2-F1-model_v4       f26aa0fe84a8270c2a2c3dfa811e40a3        258     2       37-117,124-219  0.0178
+
+    """
+#!/usr/bin/env python3
+
+IS_ZERO_INDEXED = True
+
+with open("af_domain_ids.csv", "wt") as fp_out:
+    fp_out.write("af_domain_id\\n")
+    with open("chopping_file.csv", "rt") as fp_in:
+        next(fp_in) # skip header
+        for line in fp_in:
+            cols = line.split()
+            chain_id = cols[0]
+            chopping = cols[4]
+            doms = chopping.split(',')
+            for dom in doms:
+                if dom == 'NULL':
+                    continue
+                segs = dom.split('_')
+                if IS_ZERO_INDEXED:
+                    segs_new = []
+                    for seg in segs:
+                        print(f"dom: {dom}, segs: {segs}, seg: {seg}")
+                        start, end = seg.split('-')
+                        segs_new.append(f"{int(start)+1}-{int(end)+1}")
+                    segs = segs_new
+                fp_out.write(f"{chain_id}/{'_'.join(segs)}\\n")
     """
 }
 
 workflow {
-    def zip_files_ch = Channel.fromPath( params.proteome_zip_file )
 
-    def pdb_files_ch = pdb_files_from_zip( zip_files_ch )
+    // Create a channel from AF id file
+    def afid_chopping_file = Channel.fromPath( params.afid_chopping_file )
 
-    def af_ids_ch = pdb_files_ch.map { it.collect { it.getBaseName() } }
+    def af_domain_ids = af_domain_ids_from_chopping_file( afid_chopping_file )
 
-    def id_file_ch = af_ids_ch.collectFile(name: 'af_ids.txt', newLine: true)
+    // // get AF ids from the chopping file
+    def af_ids = afid_chopping_file
+                    .splitCsv( header: true, sep: '\t')
+                    .map { it.chain_id }
+                    .collectFile( newLine: true )
 
-    def chainsaw_results_ch = run_chainsaw( pdb_files_ch )
-    def merizo_results_ch = run_merizo( pdb_files_ch )
-    def unidoc_results_ch = run_unidoc( pdb_files_ch )
+    def cif_ch = cif_files_from_web( af_ids )
 
-    def combine_results_ch = merge_domain_results( id_file_ch, chainsaw_results_ch, merizo_results_ch, unidoc_results_ch )
+    // calculate globularity
+    def globularity_results_file = run_globularity_summary( af_domain_ids, cif_ch ).collectFile()
 
-    combine_results_ch.collectFile(name: 'all_results.tsv', storeDir: workflow.launchDir)
-        .subscribe {
-            println "Entries are saved to file: $it"
-        }
+    // calculate plddt
+    def plddt_summary_file = run_plddt_summary( af_domain_ids, cif_ch ).collectFile()
+
+    // merge results
+    def combine_results_ch = merge_results( 
+        af_domain_ids,
+        globularity_results_file,
+        plddt_summary_file,
+    )
+    
+    combine_results_ch.collectFile(name: 'combined_results.tsv', storeDir: './')
 }
-
-// workflow {
-
-//     // Create a channel from the uniprot csv file
-//     def uniprot_ids_ch = Channel.fromPath( params.uniprot_csv_file )
-//         // process the file as a CSV with a header line
-//         .splitCsv(header: true)
-//         // only process a few ids when debugging
-//         .take( 5 )
-
-//     uniprot_ids_ch | view
-
-//     // Generate files containing chunks of AlphaFold ids
-//     // NOTE: this will only retrieve the first fragment in the AF prediction (F1)
-//     def af_ids = uniprot_ids_ch
-//         // make sure we don't have duplicate uniprot ids
-//         .unique()
-//         // map uniprot id (CSV row) to AlphaFold id
-//         .map { up_row -> "AF-${up_row.uniprot_id}-F1-model_v${params.af_version}" }
-//         // collect all ids into a single file
-//         .collectFile(name: 'all_af_ids.txt', newLine: true)
-//         // split into chunks and save to files
-//         .splitText(file: 'chunked_af_ids.txt', by: params.chunk_size)
-
-//     // download cif files from afdb server
-//     def cif_ch = cif_files_from_web( af_ids )
-
-//     // convert cif to pdb files
-//     def pdb_ch = cif_to_pdb( cif_ch )
-
-//     // run chainsaw on the pdb files
-//     def chainsaw_results_ch = run_chainsaw( pdb_ch )
-
-//     chainsaw_results_ch.view { println "chainsaw_results: '${it}'" }
-
-//     def chainsaw_results = chainsaw_results_ch
-//         .collectFile(name: 'results.chainsaw.csv', 
-//             // skip: 1,
-//             storeDir: workflow.launchDir)
-//         .subscribe {
-//             println "Entries are saved to file: $it"
-//         }
-// }
