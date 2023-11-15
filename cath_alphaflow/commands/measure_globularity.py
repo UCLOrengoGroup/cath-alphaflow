@@ -9,6 +9,7 @@ from cath_alphaflow.io_utils import get_csv_dictreader
 from cath_alphaflow.io_utils import get_csv_dictwriter
 from cath_alphaflow.io_utils import get_pdb_structure
 from cath_alphaflow.models.domains import GeneralDomainID
+from cath_alphaflow.models.domains import Chopping
 
 from cath_alphaflow.constants import DEFAULT_GLOB_DISTANCE, DEFAULT_GLOB_VOLUME
 
@@ -108,7 +109,8 @@ def measure_globularity(
 
     for domain_row in consensus_domain_list_reader:
         domain_id = GeneralDomainID(
-            raw_id=domain_row["domain_id"], chopping=domain_row["chopping"]
+            raw_id=domain_row["domain_id"],
+            chopping=Chopping.from_str(domain_row["chopping"]),
         )
 
         LOG.debug(f"Working on: {domain_id} ...")
