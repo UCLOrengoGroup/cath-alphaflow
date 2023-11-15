@@ -1,11 +1,17 @@
 import csv
+import gzip
 import logging
+from pathlib import Path
 import itertools
 from typing import List, Type
 import dataclasses
 
+from Bio.PDB import PDBParser
+from Bio.PDB import Structure
+
 from .models.domains import AFChainID
 from .models.domains import AFDomainID
+from .models.domains import GeneralDomainID
 from .models.domains import DecoratedCrh
 from .models.domains import Gene3DCrh
 from .models.domains import StatusLog
@@ -119,6 +125,14 @@ class AFDomainIDReader(CsvReaderBase):
 
     def dict_to_obj(self, row: dict):
         return self.object_class.from_str(row["af_domain_id"])
+
+
+class GeneralDomainIDReader(CsvReaderBase):
+    object_class = GeneralDomainID
+    fieldnames = ["domain_id"]
+
+    def dict_to_obj(self, row: dict):
+        return self.object_class.from_str(row["domain_id"])
 
 
 class AFChainIDReader(CsvReaderBase):
@@ -281,6 +295,11 @@ def get_af_chain_id_reader(csvfile):
     return reader
 
 
+def get_general_domain_id_reader(csvfile):
+    reader = GeneralDomainIDReader(csvfile)
+    return reader
+
+
 def chunked_iterable(iterable, *, chunk_size):
     it = iter(iterable)
     while True:
@@ -288,3 +307,27 @@ def chunked_iterable(iterable, *, chunk_size):
         if not chunk:
             break
         yield chunk
+
+
+def get_pdb_structure(
+    model_id, chain_pdb_dir, chains_are_gzipped=False, model_filename=None
+) -> Structure:
+    """Return a Bio.PDB.Structure for a given domain (model_id / chopping)"""
+
+    # create default filename
+    if model_filename is None:
+        if not chains_are_gzipped:
+            open_func = open
+            model_filename = model_id.raw_id + ".pdb"
+        else:
+            open_func = gzip.open
+            model_filename = model_id.raw_id + ".pdb.gz"
+
+    pdb_path = Path(chain_pdb_dir, model_filename)
+
+    parser = PDBParser()
+
+    with open_func(str(pdb_path), mode="rt") as pdb_fh:
+        structure = parser(QUIET=1).get_structure(model_id.raw_id, pdb_fh)
+
+    return structure
