@@ -6,6 +6,7 @@ import itertools
 from typing import List, Type
 import dataclasses
 
+import pydantic
 from Bio.PDB import PDBParser
 from Bio.PDB import Structure
 
@@ -62,23 +63,23 @@ class CsvReaderBase(csv.DictReader):
                 fieldnames = kwargs["fieldnames"]
             else:
                 fieldnames = [
-                    f.name
-                    for f in self.get_result_object_fields()
-                    if not f.name.startswith("_")
+                    f
+                    for f in self.get_result_object_fieldnames()
+                    if not f.startswith("_")
                 ]
             self.fieldnames = fieldnames
 
     def get_default_delimiter(self):
         return self.DEFAULT_DELIMITER
 
-    def get_result_object_fields(self):
+    def get_result_object_fieldnames(self):
         # pydantic model
-        if hasattr(self.object_class, "__fields__"):
-            fields = list(self.object_class.__fields__.values())
+        if issubclass(self.object_class, pydantic.BaseModel):
+            fieldnames = [f for f in list(self.object_class.model_fields.keys())]
         # dataclasses
         else:
-            fields = dataclasses.fields(self.object_class)
-        return fields
+            fieldnames = [f.name for f in dataclasses.fields(self.object_class)]
+        return fieldnames
 
     def __next__(self):
         """
