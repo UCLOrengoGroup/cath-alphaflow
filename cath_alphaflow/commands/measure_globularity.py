@@ -120,7 +120,9 @@ def measure_globularity(
         try:
             check_domain_chopping_matches_model_residues(domain_id, model_structure)
         except Exception as e:
-            LOG.warning(f"residue mismatch for {domain_id} (model={model_structure})")
+            LOG.warning(
+                f"residue mismatch for {domain_id} (model={model_structure}): {e.message}"
+            )
 
         domain_packing_density = calculate_packing_density(
             domain_id, model_structure, distance_cutoff
