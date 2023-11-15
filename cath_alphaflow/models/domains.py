@@ -256,6 +256,9 @@ class GeneralDomainID:
                 domain_residues.append(res)
         return domain_residues
 
+    def __str__(self):
+        return f"{self.raw_id}/{self.chopping.to_str()}"
+
 
 @dataclass
 class AFDomainID(AFChainID):
