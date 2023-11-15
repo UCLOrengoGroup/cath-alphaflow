@@ -61,7 +61,7 @@ LOG = logging.getLogger()
     help=f"The voxel resolution for approximating the protein volume. (default: {DEFAULT_GLOB_VOLUME})",
 )
 def measure_globularity(
-    consensus_chopping_list,
+    consensus_domain_list,
     pdb_dir,
     domain_globularity,
     distance_cutoff,
@@ -71,7 +71,7 @@ def measure_globularity(
     "Checks the globularity of the AF domain"
 
     consensus_domain_list_reader = get_csv_dictreader(
-        consensus_chopping_list,
+        consensus_domain_list,
         fieldnames=[
             "domain_id",
             "domain_md5",
@@ -102,7 +102,7 @@ def measure_globularity(
 
     click.echo(
         f"Checking globularity for AF domain"
-        f"(model_dir={pdb_dir}, in_file={consensus_chopping_list.name}, "
+        f"(model_dir={pdb_dir}, in_file={consensus_domain_list.name}, "
         f"out_file={domain_globularity.name} ) ..."
     )
 
