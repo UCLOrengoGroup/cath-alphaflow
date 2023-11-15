@@ -12,7 +12,7 @@ from pydantic import BaseModel as PyBaseModel
 
 
 class BaseModel(PyBaseModel):
-    model_config = ConfigDict(use_enum_values=True)
+    model_config = ConfigDict(use_enum_values=True, protected_namespaces=())
 
 
 class ConfidenceType(Enum):
@@ -126,7 +126,10 @@ class Residue(BaseModel):
         title="Confidence",
     )
     model_residue_label: int = Field(
-        ..., description="Model residue index", examples=[1], title="Model Residue Label"
+        ...,
+        description="Model residue index",
+        examples=[1],
+        title="Model Residue Label",
     )
     uniprot_residue_number: int = Field(
         ...,
@@ -150,7 +153,9 @@ class Seqres(BaseModel):
         examples=[32],
         title="From",
     )
-    to: int = Field(..., description="1-indexed last residue", examples=[976], title="To")
+    to: int = Field(
+        ..., description="1-indexed last residue", examples=[976], title="To"
+    )
 
 
 class Template(BaseModel):
@@ -214,11 +219,15 @@ class Uniprot(BaseModel):
         examples=[23],
         title="From",
     )
-    to: int = Field(..., description="1-indexed last residue", examples=[868], title="To")
+    to: int = Field(
+        ..., description="1-indexed last residue", examples=[868], title="To"
+    )
 
 
 class UniprotEntry(BaseModel):
-    ac: str = Field(..., description="UniProt accession", examples=["P00520"], title="Ac")
+    ac: str = Field(
+        ..., description="UniProt accession", examples=["P00520"], title="Ac"
+    )
     id: Optional[str] = Field(
         None, description="UniProt identifier", examples=["ABL1_MOUSE"], title="Id"
     )

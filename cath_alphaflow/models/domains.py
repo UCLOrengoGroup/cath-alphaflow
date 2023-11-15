@@ -2,7 +2,7 @@ import logging
 import re
 from typing import List, Callable
 from dataclasses import dataclass, asdict
-from pydantic import BaseModel
+from pydantic import BaseModel as PyBaseModel, ConfigDict
 
 from ..errors import ParseError, NoMatchingFragmentError
 from ..constants import (
@@ -27,6 +27,10 @@ RE_UNIPROT_DOMAIN_ID = re.compile(
 )
 
 LOG = logging.getLogger(__name__)
+
+
+class BaseModel(PyBaseModel):
+    model_config = ConfigDict(protected_namespaces=())
 
 
 class CrhBase(BaseModel):
