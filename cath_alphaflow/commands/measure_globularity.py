@@ -137,7 +137,7 @@ def measure_globularity(
         globularity_writer.writerow(
             {
                 "model_id": domain_id.raw_id,
-                "chopping": domain_id.chopping,
+                "chopping": domain_id.chopping.to_str(),
                 "packing_density": domain_packing_density,
                 "normed_radius_gyration": domain_normed_radius_gyration,
             }
