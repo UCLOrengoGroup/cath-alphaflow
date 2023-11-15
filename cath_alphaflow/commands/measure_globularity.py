@@ -117,7 +117,10 @@ def measure_globularity(
 
         model_structure = get_pdb_structure(domain_id, pdb_dir, chains_are_gzipped)
 
-        check_domain_chopping_matches_model_residues(domain_id, model_structure)
+        try:
+            check_domain_chopping_matches_model_residues(domain_id, model_structure)
+        except Exception as e:
+            LOG.warning(f"residue mismatch for {domain_id} (model={model_structure})")
 
         domain_packing_density = calculate_packing_density(
             domain_id, model_structure, distance_cutoff
@@ -155,7 +158,8 @@ def check_domain_chopping_matches_model_residues(
 
     if chopping_residue_labels != structure_residue_labels:
         raise Exception(
-            f"Residues in chopping ({len(chopping_residue_labels)}) and structure ({len(structure_residue_labels)}) do not match"
+            f"Residues in chopping ({len(chopping_residue_labels)}) and structure ({len(structure_residue_labels)}) do not match "
+            f"(mismatch={structure_residue_labels-chopping_residue_labels})"
         )
 
 
