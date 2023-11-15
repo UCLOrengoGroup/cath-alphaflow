@@ -252,7 +252,7 @@ class GeneralDomainID:
         segments = chopping.segments
         domain_residues = []
         for segment in segments:
-            for res in range(segment.start, segment.end):
+            for res in range(segment.start, segment.end + 1):
                 domain_residues.append(res)
         return domain_residues
 
