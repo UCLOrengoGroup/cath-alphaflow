@@ -108,7 +108,7 @@ def measure_globularity(
 
     for domain_row in consensus_domain_list_reader:
         domain_id = GeneralDomainID(
-            raw_id=domain_row["model_id"], chopping=domain_row["chopping"]
+            raw_id=domain_row["domain_id"], chopping=domain_row["chopping"]
         )
 
         LOG.debug(f"Working on: {domain_id} ...")
