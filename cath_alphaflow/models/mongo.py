@@ -2,13 +2,15 @@ from enum import Enum
 
 from typing import Optional
 from bson import ObjectId
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 from .beacons import UniprotSummary
 
 
 class PyObjectId(ObjectId):  # pragma: no cover
     @classmethod
+    # TODO[pydantic]: We couldn't refactor `__get_validators__`, please create the `__get_pydantic_core_schema__` manually.
+    # Check https://docs.pydantic.dev/latest/migration/#defining-custom-types for more information.
     def __get_validators__(cls):
         yield cls.validate
 
@@ -19,6 +21,8 @@ class PyObjectId(ObjectId):  # pragma: no cover
         return ObjectId(v)
 
     @classmethod
+    # TODO[pydantic]: We couldn't refactor `__modify_schema__`, please create the `__get_pydantic_json_schema__` manually.
+    # Check https://docs.pydantic.dev/latest/migration/#defining-custom-types for more information.
     def __modify_schema__(cls, field_schema):
         field_schema.update(type="string")
 
@@ -46,12 +50,9 @@ class AFFile(BaseModel):  # pragma: no cover
     uniprot_summary: UniprotSummary = Field(
         ..., description="UniProt Summary (3D Beacons)"
     )
-
-    class Config:
-        allow_population_by_field_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
-        use_enum_values = True
+    # TODO[pydantic]: The following keys were removed: `json_encoders`.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
+    model_config = ConfigDict(populate_by_name=True, arbitrary_types_allowed=True, json_encoders={ObjectId: str}, use_enum_values=True)
 
     def __str__(self):
         return f"<AFFile id={str(self.id)} dataset={self.dataset} fileName={self.fileName} fileType={self.fileType} uniprotAccession={self.uniprotAccession}>"

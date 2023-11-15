@@ -15,6 +15,7 @@ from cath_alphaflow.predicted_domain_provider import (
     Gene3DCrhPredictedCathDomainProvider,
     DecoratedCrhPredictedCathDomainProvider,
 )
+from pydantic import ConfigDict
 
 LOG = logging.getLogger()
 
@@ -128,12 +129,12 @@ def create_cath_dataset_from_files(src_decorated_crh, **kwargs):
 
 class CathDatasetGeneratorBase(pydantic.BaseModel):
 
-    csv_uniprot_ids: typing.Any  # click.File
-    gene3d_crh_output: typing.Any  # click.File
-    csv_uniprot_md5: typing.Any  # click.File
-    af_domainlist_ids: typing.Any  # click.File
-    af_chainlist_ids: typing.Any  # click.File
-    af_cath_annotations: typing.Any  # click.File
+    csv_uniprot_ids: typing.Any = None  # click.File
+    gene3d_crh_output: typing.Any = None  # click.File
+    csv_uniprot_md5: typing.Any = None  # click.File
+    af_domainlist_ids: typing.Any = None  # click.File
+    af_chainlist_ids: typing.Any = None  # click.File
+    af_cath_annotations: typing.Any = None  # click.File
     chunk_size: int
     af_version: int
     fragment_number: int
@@ -142,9 +143,7 @@ class CathDatasetGeneratorBase(pydantic.BaseModel):
     af_domainlist_writer: typing.Any = None
     af_chainlist_writer: typing.Any = None
     af_cath_annotations_writer: typing.Any = None
-
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def run(self):
 
