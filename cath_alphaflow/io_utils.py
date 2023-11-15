@@ -325,9 +325,9 @@ def get_pdb_structure(
 
     pdb_path = Path(chain_pdb_dir, model_filename)
 
-    parser = PDBParser()
+    parser = PDBParser(QUIET=1)
 
     with open_func(str(pdb_path), mode="rt") as pdb_fh:
-        structure = parser(QUIET=1).get_structure(model_id.raw_id, pdb_fh)
+        structure = parser.get_structure(model_id.raw_id, pdb_fh)
 
     return structure
