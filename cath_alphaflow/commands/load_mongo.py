@@ -18,6 +18,7 @@ from cath_alphaflow.settings import get_default_settings
 from cath_alphaflow.models.mongo import AFFile, AFFileType
 from cath_alphaflow.models import beacons
 from cath_alphaflow.errors import ParseError
+from pydantic import ConfigDict
 
 LOG = logging.getLogger(__name__)
 
@@ -119,9 +120,7 @@ class AFArchiveFile(pydantic.BaseModel):
 
     filename: str
     tarfileobj: tarfile.ExFileObject
-
-    class Config:  # pylint: disable=missing-class-docstring
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 def yield_next_file_from_archive(archive_path) -> AFArchiveFile:

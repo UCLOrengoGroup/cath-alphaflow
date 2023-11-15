@@ -2,7 +2,7 @@ import logging
 import re
 from typing import List, Callable
 from dataclasses import dataclass, asdict
-from pydantic import BaseModel
+from pydantic import BaseModel as PyBaseModel, ConfigDict
 
 from ..errors import ParseError, NoMatchingFragmentError
 from ..constants import (
@@ -19,14 +19,18 @@ RE_AF_CHAIN_ID = re.compile(
 )
 
 RE_AF_DOMAIN_ID = re.compile(
-    r"^AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9])-model_v(?P<version>[0-9]+)[/\-](?P<chopping>[0-9\-_]+)$"
+    r"^(?P<raw_id>AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9])-model_v(?P<version>[0-9]+))[/\-](?P<chopping>[0-9\-_]+)$"
 )
 
 RE_UNIPROT_DOMAIN_ID = re.compile(
-    r"^(?P<uniprot_acc>[0-9A-Z]+)[/\-](?P<chopping>[0-9\-_]+)$"
+    r"^(?P<raw_id>(?P<uniprot_acc>[0-9A-Z]+))[/\-](?P<chopping>[0-9\-_]+)$"
 )
 
 LOG = logging.getLogger(__name__)
+
+
+class BaseModel(PyBaseModel):
+    model_config = ConfigDict(protected_namespaces=())
 
 
 class CrhBase(BaseModel):
@@ -99,11 +103,13 @@ class DecoratedCrh(CrhProvider):
     indp_evalue: float
     reg_ostats: str
 
+
 @dataclass
 class StatusLog:
     """
     Holds data corresponding to an entry in a Status Log file
     """
+
     entry_id: str
     status: str
     error: str
@@ -188,7 +194,6 @@ class AFChainID:
 
     @classmethod
     def from_str(cls, raw_chainid: str):
-
         match = RE_AF_CHAIN_ID.match(raw_chainid)
         if not match:
             msg = f"failed to match AF chain id '{raw_chainid}'"
@@ -217,15 +222,52 @@ class AFChainID:
 
 
 @dataclass
-class AFDomainID(AFChainID):
+class GeneralDomainID:
+    raw_id: str
+    chopping: Chopping
+    acc: str = None
+    version: str = None
 
+    @classmethod
+    def from_uniprot_str(cls, raw_id: str, *, version: str = None):
+        match = RE_UNIPROT_DOMAIN_ID.match(raw_id)
+        if not match:
+            msg = f"failed to parse AFDomainID from Uniprot Domain ID {raw_id}"
+            LOG.error(msg)
+            raise ParseError(msg)
+
+        chopping = Chopping.from_str(match.group("chopping"))
+
+        domid = GeneralDomainID(
+            raw_id=match.group("raw_id"),
+            acc=match.group("uniprot_acc"),
+            version=version,
+            chopping=chopping,
+        )
+
+        return domid
+
+    def get_domain_residues_from_numeric_chopping(self) -> List[int]:
+        chopping = self.chopping
+        segments = chopping.segments
+        domain_residues = []
+        for segment in segments:
+            for res in range(segment.start, segment.end + 1):
+                domain_residues.append(res)
+        return domain_residues
+
+    def __str__(self):
+        return f"{self.raw_id}/{self.chopping.to_str()}"
+
+
+@dataclass
+class AFDomainID(AFChainID):
     chopping: Chopping
 
     @classmethod
     def from_uniprot_str(
         cls, raw_id: str, *, version: int, fragment_number: int = None
     ):
-
         match = RE_UNIPROT_DOMAIN_ID.match(raw_id)
         if not match:
             msg = f"failed to parse AFDomainID from Uniprot Domain ID {raw_id}"
@@ -240,7 +282,6 @@ class AFDomainID(AFChainID):
         # has predicted fragment structures named as
         # Q8WZ42-F1 (residues 1–1400), Q8WZ42-F2 (residues 201–1600), etc.
         if fragment_number is None:
-
             # F1=1-1400, F2=201-1600, etc
             for _frag_num in range(1, 1000):
                 # 1:0, 2:200, 3:400, ...
@@ -277,7 +318,6 @@ class AFDomainID(AFChainID):
 
     @classmethod
     def from_str(cls, raw_domid: str):
-
         match = RE_AF_DOMAIN_ID.match(raw_domid)
         try:
             domid = AFDomainID(
@@ -292,11 +332,11 @@ class AFDomainID(AFChainID):
             raise ParseError(msg)
 
         return domid
-    
+
     @classmethod
     def from_foldseek_query(cls, raw_query_id: str):
         if raw_query_id.endswith(".cif"):
-            raw_query_id = raw_query_id.replace('.cif','')
+            raw_query_id = raw_query_id.replace(".cif", "")
         return cls.from_str(raw_query_id)
 
     @property
