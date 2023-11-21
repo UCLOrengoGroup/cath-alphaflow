@@ -159,6 +159,33 @@ class Chopping:
             segs.append(seg)
         return Chopping(segments=segs)
 
+    def filter_bio_residues(self, residues: List[tuple[str, int, str]]):
+        """
+        Filter a list of Bio.PDB residues to only include those that are within this chopping
+        """
+        filtered_residues = []
+        segments = self.segments
+        segment_count = 0
+        current_segment = segments[segment_count]
+        in_segment = False
+        for res in residues:
+            res_id = res[1]
+            res_ins = res[2]
+            res_label = str(str(res_id) + res_ins).strip()
+            if not in_segment and str(res_label) == str(current_segment.start):
+                in_segment = True
+            if in_segment:
+                filtered_residues.append(res)
+            if in_segment and str(res_label) == str(current_segment.end):
+                in_segment = False
+                segment_count += 1
+                if segment_count < len(segments):
+                    current_segment = segments[segment_count]
+                else:
+                    # no more segments left
+                    break
+        return filtered_residues
+
     def to_str(self):
         return "_".join([f"{seg.start}-{seg.end}" for seg in self.segments])
 
