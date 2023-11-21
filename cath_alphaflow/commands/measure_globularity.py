@@ -10,6 +10,7 @@ from cath_alphaflow.io_utils import get_csv_dictwriter
 from cath_alphaflow.io_utils import get_pdb_structure
 from cath_alphaflow.models.domains import GeneralDomainID
 from cath_alphaflow.models.domains import Chopping
+from cath_alphaflow.models.domains import Segment
 
 from cath_alphaflow.constants import DEFAULT_GLOB_DISTANCE, DEFAULT_GLOB_VOLUME
 
@@ -25,7 +26,7 @@ LOG = logging.getLogger()
 @click.option(
     "--consensus_domain_list",
     type=click.File("rt"),
-    required=True,
+    required=False,
     help="Input: CSV file containing consensus domains",
 )
 @click.option(
@@ -71,24 +72,12 @@ def measure_globularity(
 ):
     "Checks the globularity of the AF domain"
 
-    consensus_domain_list_reader = get_csv_dictreader(
-        consensus_domain_list,
-        fieldnames=[
-            "domain_id",
-            "domain_md5",
-            "consensus_level",
-            "chopping",
-            "domain_nres",
-            "no_segments",
-            "plddt",
-            "total_ss",
-            "no_helix",
-            "no_strand",
-            "no_helix+strand",
-            "no_turn",
-            "proteome_id",
-        ],
-    )
+    if consensus_domain_list:
+        general_domain_provider = yield_domain_from_consensus_domain_list(
+            consensus_domain_list
+        )
+    else:
+        general_domain_provider = yield_domain_from_pdbdir(pdb_dir)
 
     globularity_writer = get_csv_dictwriter(
         domain_globularity,
@@ -107,12 +96,7 @@ def measure_globularity(
         f"out_file={domain_globularity.name} ) ..."
     )
 
-    for domain_row in consensus_domain_list_reader:
-        domain_id = GeneralDomainID(
-            raw_id=domain_row["domain_id"],
-            chopping=Chopping.from_str(domain_row["chopping"]),
-        )
-
+    for domain_id in general_domain_provider():
         LOG.debug(f"Working on: {domain_id} ...")
 
         model_structure = get_pdb_structure(domain_id, pdb_dir, chains_are_gzipped)
@@ -121,7 +105,7 @@ def measure_globularity(
             check_domain_chopping_matches_model_residues(domain_id, model_structure)
         except Exception as e:
             LOG.warning(
-                f"residue mismatch for {domain_id} (model={model_structure}): {e.message}"
+                f"residue mismatch for {domain_id} (model={model_structure}): {str(e)}"
             )
 
         domain_packing_density = calculate_packing_density(
@@ -167,10 +151,14 @@ def check_domain_chopping_matches_model_residues(
 
 def calculate_packing_density(
     domain_id: GeneralDomainID,
-    chain_structure: Structure,
+    model_structure: Structure,
     distance_cutoff: int,
 ) -> float:
-    domain_residue_numbers = domain_id.get_domain_residues_from_numeric_chopping()
+    chain_residues = model_structure.get_chains()[0].get_residues()
+    if domain_id.chopping:
+        target_residues = domain_id.chopping.filter_bio_residues(chain_residues)
+    else:
+        target_residues = chain_residues
 
     # List of hydrophobic residues
     hydrophobic_list = [
@@ -187,17 +175,16 @@ def calculate_packing_density(
 
     neighbor_list_protein = []
     # Get the number of nearby residues for all hydrophobic residues in the domain
-    atom_list = [atom for atom in chain_structure.get_atoms()]
-    for residue_number in domain_residue_numbers:
-        residue = chain_structure[0]["A"][residue_number]
-        if residue.get_resname() in hydrophobic_list and not residue.is_disordered():
-            center_atoms = Selection.unfold_entities(residue, "A")
+    atom_list = [atom for atom in model_structure.get_atoms()]
+    for res in target_residues:
+        if res.get_resname() in hydrophobic_list and not res.is_disordered():
+            center_atoms = Selection.unfold_entities(res, "A")
             ns = NeighborSearch(atom_list)
 
             nearby_residues = {
-                residue
+                _res
                 for center_atom in center_atoms
-                for residue in ns.search(center_atom.coord, distance_cutoff, "R")
+                for _res in ns.search(center_atom.coord, distance_cutoff, "R")
             }
             neighbor_list_protein.append(len(nearby_residues))
 
@@ -205,10 +192,9 @@ def calculate_packing_density(
 
 
 # Function to get the approximated Volume of the domain
-def get_volume(structure, domain_residue_numbers, volume_resolution):
+def get_volume(residues, volume_resolution):
     reduced_coords = list()
-    for residue_number in domain_residue_numbers:
-        residue = structure[0]["A"][residue_number]
+    for residue in residues:
         for atm in residue.get_atoms():
             x_reduced = int(atm.coord.tolist()[0] / volume_resolution)
             y_reduced = int(atm.coord.tolist()[1] / volume_resolution)
@@ -227,14 +213,16 @@ def calculate_normed_radius_of_gyration(
     model_structure: Structure,
     volume_resolution: int,
 ) -> float:
-    domain_residue_numbers = domain_id.get_domain_residues_from_numeric_chopping()
+    chain_residues = model_structure.get_chains()[0].get_residues()
+    if domain_id.chopping:
+        target_residues = domain_id.chopping.filter_bio_residues(chain_residues)
+    else:
+        target_residues = chain_residues
 
     coords = []
     masses = []
     # Fill lists for the coords and masses for all atoms in the domain
-    for residue_number in domain_residue_numbers:
-        residue = model_structure[0]["A"][residue_number]
-
+    for residue in target_residues:
         for atom in residue:
             coords.append(atom.coord.tolist())
             if atom.element == "C":
@@ -262,9 +250,108 @@ def calculate_normed_radius_of_gyration(
     radius_gyration = np.sqrt(r_tmp / total_mass - m_tmp)
 
     # Calculate the radius of gyration for a sphere with the same volume as the protein
-    volume = get_volume(model_structure, domain_residue_numbers, volume_resolution)
+    volume = get_volume(target_residues, volume_resolution)
     radius = np.cbrt(volume) * 3 / 4 * np.pi
     radius_gyration_sphere = np.sqrt(3 / 5 * radius**2)
 
     # Return normed radius of gyration
     return round(radius_gyration / radius_gyration_sphere, 3)
+
+
+def guess_chopping_from_pdb_file(
+    pdbfile, target_chain_id=None, assume_all_atom_breaks_are_segments=True
+) -> Chopping:
+    """
+    Reverse engineer a `Chopping` object from a PDB file
+
+    'Real' PDB files can have weird residue numberings, so it is not possible to
+    reliably know whether a PDB file has been chopped by an external process
+    (i.e. a CATH domain) or whether the numbering in the original PDB is just weird.
+    The best we can do is guess, i.e. check for cases where the sequential atom number
+    is not contiguous.
+
+    If `assume_all_atom_breaks_are_segments` is turned off then we just create a chopping
+    with a single segment that spans the entire PDB file.
+    """
+
+    pdbpath = Path(str(pdbfile))
+    segments = []
+    start_res = None
+    end_res = None
+    last_atom_num = None
+    last_res_label = None
+    with pdbpath.open("rt") as fh:
+        for line in fh:
+            if not line.startswith("ATOM"):
+                continue
+
+            atom_num = int(line[6:11])
+            chain_id = line[21]
+            res_label = line[22:27].strip()  # includes the (optional) insert code
+
+            # if we haven't specified a chain, then we take the first one we see
+            if not target_chain_id:
+                target_chain_id = chain_id
+
+            if not last_atom_num:
+                last_atom_num = atom_num
+            if not last_res_label:
+                last_res_label = res_label
+
+            if chain_id != target_chain_id:
+                continue
+
+            if not start_res:
+                start_res = res_label
+            end_res = res_label
+
+            if assume_all_atom_breaks_are_segments:
+                if res_label != last_res_label and atom_num != last_atom_num + 1:
+                    segments.append(Segment(start=start_res, end=end_res))
+                    start_res = None
+                    end_res = None
+
+            last_res_label = res_label
+            last_atom_num = atom_num
+
+    if start_res and end_res:
+        segments.append(Segment(start=start_res, end=end_res))
+
+    return Chopping(segments=segments)
+
+
+def yield_domain_from_pdbdir(pdbdir, pdb_suffix=".pdb") -> GeneralDomainID:
+    pdbdir = Path(str(pdbdir))
+    for pdbpath in pdbdir.iterdir():
+        if not str(pdbpath).endswith(pdb_suffix):
+            continue
+        model_id = pdbpath.stem
+        yield GeneralDomainID(domain_id=model_id, chopping=None)
+
+
+def yield_domain_from_consensus_domain_list(consensus_domain_list) -> GeneralDomainID:
+    consensus_domain_list_reader = get_csv_dictreader(
+        consensus_domain_list,
+        fieldnames=[
+            "domain_id",
+            "domain_md5",
+            "consensus_level",
+            "chopping",
+            "domain_nres",
+            "no_segments",
+            "plddt",
+            "total_ss",
+            "no_helix",
+            "no_strand",
+            "no_helix+strand",
+            "no_turn",
+            "proteome_id",
+        ],
+    )
+
+    for domain_row in consensus_domain_list_reader:
+        domain = GeneralDomainID(
+            model_id=domain_row["domain_id"],
+            chopping=Chopping.from_str(domain_row["chopping"]),
+        )
+        yield domain
