@@ -251,7 +251,7 @@ class AFChainID:
 @dataclass
 class GeneralDomainID:
     raw_id: str
-    chopping: Chopping
+    chopping: Chopping = None
     acc: str = None
     version: str = None
 
@@ -284,7 +284,10 @@ class GeneralDomainID:
         return domain_residues
 
     def __str__(self):
-        return f"{self.raw_id}/{self.chopping.to_str()}"
+        if self.chopping:
+            return f"{self.raw_id}/{self.chopping.to_str()}"
+        else:
+            return f"{self.raw_id}"
 
 
 @dataclass
