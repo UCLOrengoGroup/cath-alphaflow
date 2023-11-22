@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import List, Callable
+from typing import List, Callable, Tuple
 from dataclasses import dataclass, asdict
 from pydantic import BaseModel as PyBaseModel, ConfigDict
 
@@ -159,7 +159,7 @@ class Chopping:
             segs.append(seg)
         return Chopping(segments=segs)
 
-    def filter_bio_residues(self, residues: List[tuple[str, int, str]]):
+    def filter_bio_residues(self, residues: List[Tuple[str, int, str]]):
         """
         Filter a list of Bio.PDB residues to only include those that are within this chopping
         """
