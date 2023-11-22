@@ -311,18 +311,22 @@ def chunked_iterable(iterable, *, chunk_size):
 
 
 def get_pdb_structure(
-    model_id, chain_pdb_dir, chains_are_gzipped=False, model_filename=None
+    model_id,
+    chain_pdb_dir,
+    chains_are_gzipped=False,
+    model_filename=None,
+    pdb_suffix=".pdb",
 ) -> Structure:
     """Return a Bio.PDB.Structure for a given domain (model_id / chopping)"""
 
     # create default filename
     if model_filename is None:
+        model_filename = model_id.raw_id + pdb_suffix
         if not chains_are_gzipped:
             open_func = open
-            model_filename = model_id.raw_id + ".pdb"
         else:
             open_func = gzip.open
-            model_filename = model_id.raw_id + ".pdb.gz"
+            model_filename += ".gz"
 
     pdb_path = Path(chain_pdb_dir, model_filename)
 
