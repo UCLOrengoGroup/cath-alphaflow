@@ -154,7 +154,7 @@ def calculate_packing_density(
     model_structure: Structure,
     distance_cutoff: int,
 ) -> float:
-    chain_residues = model_structure.get_chains()[0].get_residues()
+    chain_residues = list(model_structure.get_chains())[0].get_residues()
     if domain_id.chopping:
         target_residues = domain_id.chopping.filter_bio_residues(chain_residues)
     else:
@@ -213,7 +213,7 @@ def calculate_normed_radius_of_gyration(
     model_structure: Structure,
     volume_resolution: int,
 ) -> float:
-    chain_residues = model_structure.get_chains()[0].get_residues()
+    chain_residues = list(model_structure.get_chains())[0].get_residues()
     if domain_id.chopping:
         target_residues = domain_id.chopping.filter_bio_residues(chain_residues)
     else:
