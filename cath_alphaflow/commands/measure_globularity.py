@@ -307,7 +307,7 @@ def guess_chopping_from_pdb_file(
 
             if assume_all_atom_breaks_are_segments:
                 if res_label != last_res_label and atom_num != last_atom_num + 1:
-                    segments.append(Segment(start=start_res, end=end_res))
+                    segments.append(Segment(start=start_res, end=last_res_label))
                     start_res = None
                     end_res = None
 
