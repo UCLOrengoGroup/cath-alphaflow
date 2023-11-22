@@ -169,8 +169,8 @@ class Chopping:
         current_segment = segments[segment_count]
         in_segment = False
         for res in residues:
-            res_id = res[1]
-            res_ins = res[2]
+            res_id = res.id[1]
+            res_ins = res.id[2]
             res_label = str(str(res_id) + res_ins).strip()
             if not in_segment and str(res_label) == str(current_segment.start):
                 in_segment = True
