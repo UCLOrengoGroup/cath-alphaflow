@@ -10,7 +10,7 @@ from Bio.PDB import PDBParser
 from cath_alphaflow.cli import cli
 from cath_alphaflow.commands.measure_globularity import (
     measure_globularity,
-    # guess_chopping_from_pdb_file,
+    guess_chopping_from_pdb_file,
     calculate_normed_radius_of_gyration,
     calculate_packing_density,
 )
@@ -52,35 +52,36 @@ def create_fake_pdb_dir(pdb_path, ids, pdb_src=EXAMPLE_PDB_FILE):
     return pdb_path
 
 
-# def test_guess_chopping_from_pdb_file():
-#     pdb_path = EXAMPLE_PDB_FILE
-#     chopping = guess_chopping_from_pdb_file(pdb_path)
-#     assert chopping.to_str() == "6-459"
+def test_guess_chopping_from_pdb_file():
+    pdb_path = EXAMPLE_PDB_FILE
+    chopping = guess_chopping_from_pdb_file(pdb_path)
+    assert chopping.to_str() == "6-459"
 
-#     tmp_pdb_file = tempfile.NamedTemporaryFile(mode="wt", suffix=".pdb")
-#     with pdb_path.open("rt") as fh:
-#         for line in fh:
-#             if line.startswith("ATOM"):
-#                 res_num = int(line[22:26].strip())
-#                 if res_num > 50 and res_num < 100:
-#                     continue
-#             tmp_pdb_file.write(line)
-#     tmp_pdb_file.flush()
+    tmp_pdb_file = tempfile.NamedTemporaryFile(mode="wt", suffix=".pdb")
+    with pdb_path.open("rt") as fh:
+        for line in fh:
+            if line.startswith("ATOM"):
+                res_num = int(line[22:26].strip())
+                if res_num > 50 and res_num < 100:
+                    continue
+            tmp_pdb_file.write(line)
+    tmp_pdb_file.flush()
 
-#     chopping = guess_chopping_from_pdb_file(tmp_pdb_file.name)
-#     assert chopping.to_str() == "6-50_100-459"
+    chopping = guess_chopping_from_pdb_file(tmp_pdb_file.name)
+    assert chopping.to_str() == "6-50_100-459"
 
 
-def test_calculate_normed_radius_of_gyration():
+def test_calculate_normed_radius_of_gyration_af():
     pdb_path = EXAMPLE_AF_FILE
     model_id = pdb_path.stem
+    expected_gyration_radius = 0.373
 
     model_structure = PDBParser().get_structure(model_id, pdb_path)
 
     chopping = Chopping.from_str("1-432")
     domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
     gyration_radius = calculate_normed_radius_of_gyration(domain_id, model_structure, 5)
-    assert gyration_radius == 0.373
+    assert gyration_radius == expected_gyration_radius
 
     del chopping
     del domain_id
@@ -90,10 +91,45 @@ def test_calculate_normed_radius_of_gyration():
     chopping = Chopping.from_str("100-200")
     domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
     gyration_radius = calculate_normed_radius_of_gyration(domain_id, model_structure, 5)
-    assert gyration_radius != 0.373
+    assert gyration_radius != expected_gyration_radius
 
 
-def test_calculate_packing_density():
+def test_calculate_normed_radius_of_gyration_cath():
+    pdb_path = EXAMPLE_PDB_FILE
+    model_id = pdb_path.stem
+    expected_gyration_radius = 0.296
+
+    model_structure = PDBParser().get_structure(model_id, pdb_path)
+
+    chopping = Chopping.from_str("6-459")
+    domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
+    gyration_radius = calculate_normed_radius_of_gyration(domain_id, model_structure, 5)
+    assert gyration_radius == expected_gyration_radius
+
+    del chopping
+    del domain_id
+    del gyration_radius
+
+    # if we don't specify the chopping then the gyration radius should be the same
+    domain_id = GeneralDomainID(raw_id=model_id)
+    gyration_radius = calculate_normed_radius_of_gyration(domain_id, model_structure, 5)
+    assert gyration_radius != expected_gyration_radius
+
+    del domain_id
+    del gyration_radius
+
+    # if we change the chopping then the gyration radius should also change
+    chopping = Chopping.from_str("100-200")
+    domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
+    gyration_radius = calculate_normed_radius_of_gyration(domain_id, model_structure, 5)
+    assert gyration_radius != expected_gyration_radius
+
+    del chopping
+    del domain_id
+    del gyration_radius
+
+
+def test_calculate_packing_density_af():
     pdb_path = EXAMPLE_AF_FILE
     model_id = pdb_path.stem
 
@@ -103,3 +139,15 @@ def test_calculate_packing_density():
     domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
     packing_density = calculate_packing_density(domain_id, model_structure, 5)
     assert packing_density == 9.422
+
+
+def test_calculate_packing_density_cath():
+    pdb_path = EXAMPLE_PDB_FILE
+    model_id = pdb_path.stem
+
+    model_structure = PDBParser().get_structure(model_id, pdb_path)
+
+    chopping = Chopping.from_str("6-459")
+    domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
+    packing_density = calculate_packing_density(domain_id, model_structure, 5)
+    assert packing_density == 12.363
