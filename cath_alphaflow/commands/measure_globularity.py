@@ -92,21 +92,20 @@ def measure_globularity(
 
     click.echo(
         f"Checking globularity for AF domain"
-        f"(model_dir={pdb_dir}, in_file={consensus_domain_list.name}, "
-        f"out_file={domain_globularity.name} ) ..."
+        f"(model_dir={pdb_dir}, out_file={domain_globularity.name} ) ..."
     )
 
-    for domain_id in general_domain_provider():
+    for domain_id in general_domain_provider:
         LOG.debug(f"Working on: {domain_id} ...")
 
         model_structure = get_pdb_structure(domain_id, pdb_dir, chains_are_gzipped)
-
-        try:
-            check_domain_chopping_matches_model_residues(domain_id, model_structure)
-        except Exception as e:
-            LOG.warning(
-                f"residue mismatch for {domain_id} (model={model_structure}): {str(e)}"
-            )
+        if domain_id.chopping:
+            try:
+                check_domain_chopping_matches_model_residues(domain_id, model_structure)
+            except Exception as e:
+                LOG.warning(
+                    f"residue mismatch for {domain_id} (model={model_structure}): {str(e)}"
+                )
 
         domain_packing_density = calculate_packing_density(
             domain_id, model_structure, distance_cutoff
@@ -121,7 +120,7 @@ def measure_globularity(
         globularity_writer.writerow(
             {
                 "model_id": domain_id.raw_id,
-                "chopping": domain_id.chopping.to_str(),
+                "chopping": domain_id.chopping.to_str() if domain_id.chopping else "-",
                 "packing_density": domain_packing_density,
                 "normed_radius_gyration": domain_normed_radius_gyration,
             }
@@ -217,7 +216,7 @@ def calculate_normed_radius_of_gyration(
     if domain_id.chopping:
         target_residues = domain_id.chopping.filter_bio_residues(chain_residues)
     else:
-        target_residues = chain_residues
+        target_residues = list(chain_residues)
 
     coords = []
     masses = []
@@ -326,7 +325,7 @@ def yield_domain_from_pdbdir(pdbdir, pdb_suffix=".pdb") -> GeneralDomainID:
         if not str(pdbpath).endswith(pdb_suffix):
             continue
         model_id = pdbpath.stem
-        yield GeneralDomainID(domain_id=model_id, chopping=None)
+        yield GeneralDomainID(raw_id=model_id, chopping=None)
 
 
 def yield_domain_from_consensus_domain_list(consensus_domain_list) -> GeneralDomainID:
@@ -351,7 +350,7 @@ def yield_domain_from_consensus_domain_list(consensus_domain_list) -> GeneralDom
 
     for domain_row in consensus_domain_list_reader:
         domain = GeneralDomainID(
-            model_id=domain_row["domain_id"],
+            raw_id=domain_row["domain_id"],
             chopping=Chopping.from_str(domain_row["chopping"]),
         )
         yield domain
