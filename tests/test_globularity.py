@@ -113,7 +113,7 @@ def test_calculate_normed_radius_of_gyration_cath():
     # if we don't specify the chopping then the gyration radius should be the same
     domain_id = GeneralDomainID(raw_id=model_id)
     gyration_radius = calculate_normed_radius_of_gyration(domain_id, model_structure, 5)
-    assert gyration_radius != expected_gyration_radius
+    assert gyration_radius == expected_gyration_radius
 
     del domain_id
     del gyration_radius
