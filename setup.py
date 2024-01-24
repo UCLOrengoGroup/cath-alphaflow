@@ -34,7 +34,7 @@ setup(
     install_requires=[
         "click",
         "google-cloud-storage",
-        "cx_oracle",
+        "oracledb",
         "prettyconf",
         "biopython",
         "pdb-tools",

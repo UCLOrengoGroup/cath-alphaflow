@@ -1,7 +1,7 @@
 from unittest import mock
 import logging
 
-import cx_Oracle
+import oracledb
 
 from cath_alphaflow.db_utils import OraDB
 from cath_alphaflow.settings import get_default_settings
@@ -17,9 +17,8 @@ def test_mock_query(create_mock_query):
     assert rows == expected_rows
 
 
-@mock.patch.object(cx_Oracle, "connect")
+@mock.patch.object(oracledb, "connect")
 def test_mock_connection(mock_connect, mock_settings):
-
     settings = get_default_settings()
 
     OraDB()
@@ -37,7 +36,6 @@ def test_mock_connection(mock_connect, mock_settings):
 
 
 def test_yieldall(create_mock_query):
-
     mock_rows = [
         {"cath_code": "1", "description": "Mainly Alpha"},
         {"cath_code": "2", "description": "Mainly Beta"},

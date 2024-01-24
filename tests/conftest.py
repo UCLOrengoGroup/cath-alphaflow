@@ -1,7 +1,7 @@
 from cath_alphaflow import settings
 import logging
 import pytest
-import cx_Oracle
+import oracledb as Oracle
 
 from click.testing import CliRunner
 
@@ -97,7 +97,7 @@ def mock_connection(monkeypatch):
     def mock_connect(*args, **kwargs):
         return MockConnect()
 
-    monkeypatch.setattr(cx_Oracle, "connect", mock_connect)
+    monkeypatch.setattr(Oracle, "connect", mock_connect)
 
 
 @pytest.fixture
