@@ -6,7 +6,7 @@ import tempfile
 
 from Bio import SeqIO
 from Bio.PDB import MMCIFParser
-from Bio.PDB.Polypeptide import three_to_one
+from Bio.PDB.Polypeptide import protein_letters_3to1
 
 from cath_alphaflow.models.domains import Chopping, AFDomainID
 from cath_alphaflow.chopping import ChoppingProcessor, chop_cif
@@ -40,7 +40,6 @@ def get_unzipped_cif_file(zipped_cif_path):
 
 @pytest.fixture
 def example_cif_chain(example_cif_tmpfile):
-
     parser = MMCIFParser()
     structure = parser.get_structure("1abc", example_cif_tmpfile.name)
     return list(structure.get_chains())[0]
@@ -65,7 +64,6 @@ def example_expected_resids(example_chopping_str):
 def test_chopping_processor(
     example_chopping_str, example_cif_chain, example_expected_resids
 ):
-
     domain_resnames = []
     chopper = ChoppingProcessor(
         Chopping.from_str(example_chopping_str),
@@ -78,7 +76,6 @@ def test_chopping_processor(
 def test_chopping_processor_from_str(
     example_chopping_str, example_cif_chain, example_expected_resids
 ):
-
     domain_resnames = []
     chopper = ChoppingProcessor(
         example_chopping_str,
@@ -89,7 +86,6 @@ def test_chopping_processor_from_str(
 
 
 def test_chop_cif(example_cif_tmpfile, example_chopping_str, example_expected_resids):
-
     new_cif_tmpfile = tempfile.NamedTemporaryFile(mode="wt", suffix=".cif")
     example_chopping = Chopping.from_str(example_chopping_str)
 
@@ -141,7 +137,7 @@ def test_chop_multi_fragment():
         structure = parser.get_structure(uniprot_with_chopping, fp)
 
     sequence_from_chopped_cif = "".join(
-        [three_to_one(res.get_resname()) for res in structure.get_residues()]
+        [protein_letters_3to1[res.get_resname()] for res in structure.get_residues()]
     )
 
     assert sequence_from_chopped_fasta == sequence_from_chopped_cif
