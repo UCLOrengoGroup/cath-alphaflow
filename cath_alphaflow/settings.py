@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from prettyconf import config
 
@@ -7,6 +8,9 @@ DEFAULT_AF_FRAGMENT = 1
 PROJECT_ROOT_DIR = Path(__file__).parent.parent
 DEFAULT_FS_BINARY_PATH = str(PROJECT_ROOT_DIR / "foldseek" / "bin" / "foldseek")
 DEFAULT_FS_OVERLAP = 0.6
+
+LOG = logging.getLogger(__name__)
+
 
 def resolve_path(raw_path_str):
     return str(Path(raw_path_str).resolve())
@@ -28,7 +32,6 @@ class Settings:
     FS_DB_PATH = config("FS_DB_PATH", default="foldseek_db", cast=resolve_path)
     FS_TMP_PATH = config("FS_TMP_PATH", default="foldseek_tmp", cast=resolve_path)
     FS_OVERLAP = config("FS_OVERLAP", default=DEFAULT_FS_OVERLAP)
-    
 
     MONGO_USERNAME = config("MONGO_USERNAME", default=None)
     MONGO_PASSWORD = config("MONGO_PASSWORD", default=None)
@@ -62,4 +65,10 @@ class TestSettings(Settings):
 
 
 def get_default_settings():
+    LOG.info("Using default settings")
     return ProductionSettings()
+
+
+def get_test_settings():
+    LOG.info("Using test settings")
+    return TestSettings()
