@@ -1,29 +1,35 @@
 import logging
 import oracledb as Oracle
 
-from cath_alphaflow.settings import get_default_settings
+from cath_alphaflow import settings
 from cath_alphaflow.predicted_domain_provider import OraclePredictedCathDomainProvider
 
 LOG = logging.getLogger(__name__)
 
-config = get_default_settings()
 
-DEFAULT_HOST = config.ORACLE_DB_HOST
-DEFAULT_PORT = config.ORACLE_DB_PORT
-DEFAULT_SID = config.ORACLE_DB_SID
-DEFAULT_USER = config.ORACLE_DB_USERNAME
-DEFAULT_PASSWORD = config.ORACLE_DB_PASSWORD
-
-
-class OraDB(OraclePredictedCathDomainProvider, Oracle.Connection):
+class OraDB(OraclePredictedCathDomainProvider):
     def __init__(
         self,
-        host=DEFAULT_HOST,
-        port=DEFAULT_PORT,
-        sid=DEFAULT_SID,
-        user=DEFAULT_USER,
-        password=DEFAULT_PASSWORD,
+        host=None,
+        port=None,
+        sid=None,
+        user=None,
+        password=None,
     ):
+        config = settings.get_default_settings()
+
+        if not host:
+            host = config.ORACLE_DB_HOST
+        if not port:
+            port = config.ORACLE_DB_PORT
+        if not sid:
+            sid = config.ORACLE_DB_SID
+        if not user:
+            user = config.ORACLE_DB_USERNAME
+        if not password:
+            password = config.ORACLE_DB_PASSWORD
+
+        LOG.info("Connecting to Oracle DB: %s@%s:%s/%s", user, host, port, sid)
         self._dsn = Oracle.makedsn(host, port, sid=sid)
         self._conn = Oracle.connect(user=user, password=password, dsn=self._dsn)
 
