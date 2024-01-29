@@ -46,13 +46,11 @@ def create_fake_cif_dir(dirname, ids, cif_src=EXAMPLE_CIF_FILE):
 
 
 def test_convert_cif_to_foldseek_db(tmp_path, create_cli_runner):
-
     headers = ["header"]
     ids = ["AF-P00520-F1-model_v3.cif.gz"]
 
     runner = create_cli_runner(extra_settings={"FS_BINARY_PATH": "foldseek-fake-path"})
     with runner.isolated_filesystem(temp_dir=tmp_path):
-
         cwd_path = Path.cwd()
 
         tmp_fs_path = create_fake_cif_dir("cif", ids)
@@ -69,7 +67,10 @@ def test_convert_cif_to_foldseek_db(tmp_path, create_cli_runner):
             "--fs_querydb_dir",
             f"{tmp_foldseek_db_path}",
         )
-        print(args)
+        # print("CMD: " + " ".join(args))
         result = runner.invoke(cli, args)
+        if result.exception:
+            print(f"RESULT.exception: {result.exception}")
+        assert result.exception is None
         assert result.exit_code == 0
         assert "DONE" in result.output
