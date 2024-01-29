@@ -93,7 +93,7 @@ class MockConnect:
 
 
 @pytest.fixture
-def mock_connection(monkeypatch):
+def mock_connection(monkeypatch, mock_settings):
     def mock_connect(*args, **kwargs):
         return MockConnect()
 
