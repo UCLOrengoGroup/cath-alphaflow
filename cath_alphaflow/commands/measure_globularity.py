@@ -14,6 +14,8 @@ from cath_alphaflow.models.domains import Segment
 
 from cath_alphaflow.constants import DEFAULT_GLOB_DISTANCE, DEFAULT_GLOB_VOLUME
 
+DEFAULT_PDB_SUFFIX = ".pdb"
+
 LOG = logging.getLogger()
 
 # Path: cath_alphaflow/commands/measure_globularity.py
@@ -49,6 +51,12 @@ LOG = logging.getLogger()
     help="Whether chain files are stored in .gz files",
 )
 @click.option(
+    "--pdb-suffix",
+    type=str,
+    default=DEFAULT_PDB_SUFFIX,
+    help="Suffix to use when looking for the PDB model file",
+)
+@click.option(
     "--domain_globularity",
     type=click.File("wt"),
     required=True,
@@ -72,6 +80,7 @@ def measure_globularity(
     consensus_domain_list,
     chainsaw_domain_list,
     pdb_dir,
+    pdb_suffix,
     domain_globularity,
     distance_cutoff,
     volume_resolution,
@@ -107,22 +116,15 @@ def measure_globularity(
 
     click.echo(
         f"Checking domain globularity "
-        f"(model_dir={pdb_dir}, out_file={domain_globularity.name} ) ..."
+        f"(model_dir={pdb_dir}, pdb_suffix={pdb_suffix}, out_file={domain_globularity.name} ) ..."
     )
 
     for domain_id in general_domain_provider:
         LOG.debug(f"Working on: {domain_id} ...")
 
-        model_structure = get_pdb_structure(domain_id, pdb_dir, chains_are_gzipped)
-
-        # this check only works for structures with sequential residue numbering
-        if domain_id.chopping:
-            try:
-                check_domain_chopping_matches_model_residues(domain_id, model_structure)
-            except Exception as e:
-                LOG.warning(
-                    f"residue mismatch for {domain_id} (model={model_structure}): {str(e)}"
-                )
+        model_structure = get_pdb_structure(
+            domain_id, pdb_dir, chains_are_gzipped, pdb_suffix=pdb_suffix
+        )
 
         domain_packing_density = calculate_packing_density(
             domain_id, model_structure, distance_cutoff
