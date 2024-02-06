@@ -3,10 +3,11 @@ import logging
 from pathlib import Path
 import re
 from typing import Callable, Union
+from enum import Enum
 
-
-from Bio.PDB import MMCIFParser
+from Bio.PDB import MMCIFParser, PDBParser
 from Bio.PDB.mmcifio import MMCIFIO
+from Bio.PDB import PDBIO
 
 from .models.domains import Chopping
 from .errors import ChoppingError, MultipleModelsError, MultipleChainsError, ParseError
@@ -14,6 +15,11 @@ from .errors import ChoppingError, MultipleModelsError, MultipleChainsError, Par
 LOG = logging.getLogger(__name__)
 
 RE_RESIDUE_MATCH = re.compile(r"(-?[0-9]+)([A-Z]?)")
+
+
+class StructureFileType(Enum):
+    PDB = "PDB"
+    CIF = "CIF"
 
 
 def default_map_to_pdb_resid(res):
@@ -40,25 +46,68 @@ def chop_cif(
 
     """
 
-    parser = MMCIFParser()
+    chop_structure(
+        domain_id=domain_id,
+        chain_path=chain_cif_path,
+        domain_path=domain_cif_path,
+        chopping=chopping,
+        map_to_pdb_resid=map_to_pdb_resid,
+        file_type=StructureFileType.CIF,
+    )
 
-    if str(chain_cif_path).endswith(".gz"):
-        with gzip.open(str(chain_cif_path), mode="rt") as fp:
+
+def chop_structure(
+    *,
+    domain_id: str,
+    chain_path: Path,
+    domain_path: Path,
+    chopping: Chopping,
+    map_to_pdb_resid: Callable = default_map_to_pdb_resid,
+    file_type: StructureFileType = StructureFileType.PDB,
+):
+    """
+    Chops a PDB/CIF file into a domain based on the given chopping
+
+    The optional `map_to_pdb_resid` parameter should provide a callable that accepts
+    the start/end residue (`str`) from the chopping/segment and returns the equivalent
+    residue name from the PDB/CIF structure. By default this is a 1:1 mapping, i.e. it
+    is assumed that the start/end values in the chopping are equivalent to the residue
+    labels in CIF.
+
+    """
+
+    if not file_type:
+        if ".cif" in str(chain_path):
+            file_type = StructureFileType.CIF
+        elif ".pdb" in str(chain_path):
+            file_type = StructureFileType.PDB
+        else:
+            raise ParseError(f"Unable to determine file type from {chain_path}")
+
+    if file_type == StructureFileType.CIF:
+        parser = MMCIFParser()
+        io = MMCIFIO()
+    elif file_type == StructureFileType.PDB:
+        parser = PDBParser()
+        io = PDBIO()
+    else:
+        raise ParseError(f"Unknown file type {file_type}")
+
+    if str(chain_path).endswith(".gz"):
+        with gzip.open(str(chain_path), mode="rt") as fp:
             structure = parser.get_structure(domain_id, fp)
     else:
-        structure = parser.get_structure(domain_id, str(chain_cif_path))
-
-    io = MMCIFIO()
+        structure = parser.get_structure(domain_id, str(chain_path))
 
     models = structure.get_list()
     if len(models) != 1:
-        msg = f"expected exactly 1 model, found {len(models)} in {chain_cif_path}"
+        msg = f"expected exactly 1 model, found {len(models)} in {chain_path}"
         raise MultipleModelsError(msg)
     model = models[0]
 
     chains = model.get_list()
     if len(chains) != 1:
-        msg = f"expected exactly 1 chain, found {len(chains)} in {chain_cif_path}"
+        msg = f"expected exactly 1 chain, found {len(chains)} in {chain_path}"
         raise MultipleChainsError(msg)
     chain = chains[0]
 
@@ -77,7 +126,7 @@ def chop_cif(
 
     io.set_structure(structure)
 
-    class CifSelector:
+    class ResSelector:
         def accept_model(self, _model):
             # LOG.info(f"accept_model: {_model} == {model} ({_model == model})")
             return 1 if _model == model else 0
@@ -92,13 +141,13 @@ def chop_cif(
         def accept_atom(self, _atom):
             return 1
 
-    cif_selector = CifSelector()
+    res_selector = ResSelector()
 
-    if str(domain_cif_path).endswith(".gz"):
-        with gzip.open(str(domain_cif_path), mode="wt") as fp:
-            io.save(fp, select=cif_selector)
+    if str(domain_path).endswith(".gz"):
+        with gzip.open(str(domain_path), mode="wt") as fp:
+            io.save(fp, select=res_selector)
     else:
-        io.save(str(domain_cif_path), select=cif_selector)
+        io.save(str(domain_path), select=res_selector)
 
 
 class ChoppingProcessor:
@@ -197,7 +246,6 @@ class ChoppingProcessor:
     def process_chain(self, chain):
         self.init()
         for residue in chain.get_unpacked_list():
-
             residue_id = residue.id
             # if the chopping has set a mapping between PDB residue and chopping
             # (e.g due to AF fragments being offset), then apply that here
