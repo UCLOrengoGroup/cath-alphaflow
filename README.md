@@ -21,7 +21,7 @@ superfamilies (i.e. domains that are related by evolution).
 
 **NextFlow** - [NextFlow](https://www.nextflow.io/) enables scalable and reproducible scientific workflows using software containers. It allows the adaptation of pipelines written in the most common scripting languages.
 
-**dssp** - [dssp](https://github.com/PDB-REDO/dssp) applies secondary structure to protein sequence. 
+**dssp** - [dssp](https://github.com/PDB-REDO/dssp) applies secondary structure to protein sequence.
 Needs first installed: [libmcfp](https://github.com/mhekkel/libmcfp)
 
 **oracle** - Some datasources come optionally from an oracle database, for which there is access only within UCL. Instructions for UCL access to the database are [here](README.oracle.md)
@@ -132,25 +132,43 @@ You would typically run this from an HPC login node.
 ---
 
 ## Tracing and visualising timelines of the pipeline
+
 https://www.nextflow.io/docs/latest/tracing.html
 
 The production of a pipeline image needs the installation of graphviz
+
 ```
 sudo apt install graphviz
 ```
+
 Call nextflow with -with-dag, e.g.
+
 ```
 ./nextflow run workflows/cath-test-workflow.nf -with-dag cath-test-workflow.png
 ```
+
 An html report that shows the process timings, gantt chart style
+
 ```
 ./nextflow run workflows/cath-test-workflow.nf -with-timeline cath-test-workflow-gantt.html
 ```
-An html html report with plotly summaries of processes: 
+
+An html html report with plotly summaries of processes:
+
 ```
 ./nextflow run workflows/cath-test-workflow.nf -with-report cath-test-workflow-plots.html
 ```
+
 A TSV type text file that shows a list of all the processes run, runtime, cpu, memory usage etc:
+
 ```
 ./nextflow run workflows/cath-test-workflow.nf -with-trace
 ```
+
+## Troubleshooting
+
+Errors when running tests
+
+- make sure you have installed foldseek
+- make sure you have refreshed dependencies (`pip install .`)
+- did the last build work?
