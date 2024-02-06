@@ -15,6 +15,7 @@ from cath_alphaflow.commands.measure_globularity import (
     calculate_packing_density,
 )
 from cath_alphaflow.models.domains import GeneralDomainID, Chopping, Segment
+from cath_alphaflow.chopping import chop_structure
 
 PDB_ID = "2xdqA"
 AF_ID = "AF-Q96HM7-F1-model_v4"
@@ -69,6 +70,39 @@ def test_guess_chopping_from_pdb_file():
 
     chopping = guess_chopping_from_pdb_file(tmp_pdb_file.name)
     assert chopping.to_str() == "6-50_100-459"
+
+
+def test_globularity_for_domain_matches_chain_with_chopping():
+    """
+    Check that the globularity is the same for a chopped domain vs a chain with chopping
+    """
+    pdb_path = PDB_DIR / "5yh0J.pdb"
+    model_id = pdb_path.stem
+
+    chain_structure = PDBParser().get_structure(model_id, pdb_path)
+
+    chopping = Chopping.from_str("135-366")
+    domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
+
+    chain_with_chopping_packing_density = calculate_packing_density(
+        domain_id, chain_structure, 5, include_all_atoms=False
+    )
+    assert chain_with_chopping_packing_density == 11.374
+
+    tmp_domain_pdb = tempfile.NamedTemporaryFile("wt", suffix=".pdb")
+
+    chop_structure(
+        domain_id=model_id,
+        chain_path=pdb_path,
+        domain_path=tmp_domain_pdb.name,
+        chopping=chopping,
+    )
+
+    domain_structure = PDBParser().get_structure(model_id, tmp_domain_pdb.name)
+    domain_packing_density = calculate_packing_density(
+        domain_id, domain_structure, 5, include_all_atoms=True
+    )
+    assert domain_packing_density == chain_with_chopping_packing_density
 
 
 def test_calculate_normed_radius_of_gyration_af():
@@ -151,3 +185,21 @@ def test_calculate_packing_density_cath():
     domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
     packing_density = calculate_packing_density(domain_id, model_structure, 5)
     assert packing_density == 12.363
+
+
+def test_globularity_pdb():
+    pdb_path = PDB_DIR / "5yh0J.pdb"
+    model_id = pdb_path.stem
+
+    model_structure = PDBParser().get_structure(model_id, pdb_path)
+
+    chopping = Chopping.from_str("135-366")
+    domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
+
+    packing_density_all = calculate_packing_density(domain_id, model_structure, 5)
+    assert packing_density_all == 12.571
+
+    packing_density_just_domain = calculate_packing_density(
+        domain_id, model_structure, 5, include_all_atoms=False
+    )
+    assert packing_density_just_domain == 11.374
