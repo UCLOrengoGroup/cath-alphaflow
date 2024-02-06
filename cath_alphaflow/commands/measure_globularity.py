@@ -106,7 +106,7 @@ def measure_globularity(
     globularity_writer.writeheader()
 
     click.echo(
-        f"Checking globularity for AF domain"
+        f"Checking domain globularity "
         f"(model_dir={pdb_dir}, out_file={domain_globularity.name} ) ..."
     )
 
@@ -114,6 +114,8 @@ def measure_globularity(
         LOG.debug(f"Working on: {domain_id} ...")
 
         model_structure = get_pdb_structure(domain_id, pdb_dir, chains_are_gzipped)
+
+        # this check only works for structures with sequential residue numbering
         if domain_id.chopping:
             try:
                 check_domain_chopping_matches_model_residues(domain_id, model_structure)
@@ -130,7 +132,7 @@ def measure_globularity(
             domain_id, model_structure, volume_resolution
         )
         LOG.debug(
-            f"Processed entry: {domain_id}\tpacking_density:{domain_packing_density}\tgiration:{domain_normed_radius_gyration}"
+            f"Processed entry: {domain_id}\tpacking_density:{domain_packing_density}\tgyration:{domain_normed_radius_gyration}"
         )
         globularity_writer.writerow(
             {
@@ -167,6 +169,7 @@ def calculate_packing_density(
     domain_id: GeneralDomainID,
     model_structure: Structure,
     distance_cutoff: int,
+    include_all_atoms: bool = True,
 ) -> float:
     chain_residues = list(model_structure.get_chains())[0].get_residues()
     if domain_id.chopping:
@@ -188,8 +191,12 @@ def calculate_packing_density(
     ]
 
     neighbor_list_protein = []
-    # Get the number of nearby residues for all hydrophobic residues in the domain
-    atom_list = [atom for atom in model_structure.get_atoms()]
+    if include_all_atoms:
+        # nearby residues for all hydrophobic residues in the structure
+        atom_list = [atom for atom in model_structure.get_atoms()]
+    else:
+        # nearby residues for all hydrophobic residues in the domain
+        atom_list = [atom for res in target_residues for atom in res.get_atoms()]
     for res in target_residues:
         if res.get_resname() in hydrophobic_list and not res.is_disordered():
             center_atoms = Selection.unfold_entities(res, "A")
