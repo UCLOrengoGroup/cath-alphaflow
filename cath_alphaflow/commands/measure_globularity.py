@@ -51,7 +51,7 @@ LOG = logging.getLogger()
     help="Whether chain files are stored in .gz files",
 )
 @click.option(
-    "--pdb-suffix",
+    "--pdb_suffix",
     type=str,
     default=DEFAULT_PDB_SUFFIX,
     help="Suffix to use when looking for the PDB model file",
