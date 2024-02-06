@@ -30,6 +30,12 @@ LOG = logging.getLogger()
     help="Input: CSV file containing consensus domains",
 )
 @click.option(
+    "--chainsaw_domain_list",
+    type=click.File("rt"),
+    required=False,
+    help="Input: CSV file containing chainsaw domain choppings",
+)
+@click.option(
     "--pdb_dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True),
     required=True,
@@ -64,6 +70,7 @@ LOG = logging.getLogger()
 )
 def measure_globularity(
     consensus_domain_list,
+    chainsaw_domain_list,
     pdb_dir,
     domain_globularity,
     distance_cutoff,
@@ -72,9 +79,17 @@ def measure_globularity(
 ):
     "Checks the globularity of the AF domain"
 
+    if consensus_domain_list and chainsaw_domain_list:
+        msg = "Cannot specify both --consensus_domain_list and --chainsaw_domain_list"
+        raise click.BadParameter(msg)
+
     if consensus_domain_list:
         general_domain_provider = yield_domain_from_consensus_domain_list(
             consensus_domain_list
+        )
+    elif chainsaw_domain_list:
+        general_domain_provider = yield_domain_from_chainsaw_domain_list_csv(
+            chainsaw_domain_list
         )
     else:
         general_domain_provider = yield_domain_from_pdbdir(pdb_dir)
@@ -351,6 +366,56 @@ def yield_domain_from_consensus_domain_list(consensus_domain_list) -> GeneralDom
     for domain_row in consensus_domain_list_reader:
         domain = GeneralDomainID(
             raw_id=domain_row["domain_id"],
+            chopping=Chopping.from_str(domain_row["chopping"]),
+        )
+        yield domain
+
+
+def yield_domain_from_chainsaw_domain_list_csv(
+    consensus_domain_list,
+) -> GeneralDomainID:
+    """
+
+    ```
+    $ head combined_chainsaw_domains.tsv
+    chain_id	sequence_md5	nres	ndom	chopping	uncertainty
+    5yntA	5e88befc4122daa13edac258bd490776	300	1	3-292	0.00836
+    5yh0J	dcb023981e453a818025bc8bc1789d51	378	2	135-366	0.171
+    5yh0J	dcb023981e453a818025bc8bc1789d51	378	2	377-547	0.171
+    ```
+    """
+
+    fieldnames = [
+        "chain_id",
+        "sequence_md5",
+        "nres",
+        "ndom",
+        "chopping",
+        "uncertainty",
+    ]
+    chainsaw_domain_list_reader = get_csv_dictreader(
+        consensus_domain_list,
+        fieldnames=fieldnames,
+    )
+
+    headers = next(chainsaw_domain_list_reader)
+
+    assert list(headers.values()) == list(
+        fieldnames
+    ), f"Unexpected headers: {list(headers.values())} (expected {fieldnames})"
+
+    domains_by_chain_id = {}
+
+    for domain_row in chainsaw_domain_list_reader:
+        chain_id = domain_row["chain_id"]
+        if chain_id not in domains_by_chain_id:
+            domains_by_chain_id[chain_id] = []
+        domain_count = len(domains_by_chain_id[chain_id])
+        domain_id = f"{chain_id}{domain_count:02}"
+        domains_by_chain_id[chain_id].append(domain_id)
+        domain = GeneralDomainID(
+            # raw_id=domain_id,
+            raw_id=chain_id,
             chopping=Chopping.from_str(domain_row["chopping"]),
         )
         yield domain
