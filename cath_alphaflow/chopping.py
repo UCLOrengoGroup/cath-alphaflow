@@ -32,7 +32,7 @@ def chop_cif(
     domain_id: str,
     chain_cif_path: Path,
     domain_cif_path: Path,
-    chopping: ChoppingPdbResLabel | ChoppingSeqres,
+    chopping: Union[ChoppingPdbResLabel, ChoppingSeqres],
     map_to_pdb_resid: Callable = default_map_to_pdb_resid,
 ):
     """
@@ -61,7 +61,7 @@ def chop_structure(
     domain_id: str,
     chain_path: Path,
     domain_path: Path,
-    chopping: ChoppingPdbResLabel | ChoppingSeqres,
+    chopping: Union[ChoppingPdbResLabel, ChoppingSeqres],
     map_to_pdb_resid: Callable = default_map_to_pdb_resid,
     file_type: StructureFileType = StructureFileType.PDB,
 ):
@@ -181,7 +181,7 @@ class ChoppingProcessor:
 
     def __init__(
         self,
-        chopping: Union[str, ChoppingPdbResLabel | ChoppingSeqres],
+        chopping: Union[str, ChoppingPdbResLabel, ChoppingSeqres],
         on_segment_residue: Callable,
         *,
         map_to_pdb_resid: Callable = default_map_to_pdb_resid,
