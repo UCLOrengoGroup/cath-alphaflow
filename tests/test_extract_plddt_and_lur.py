@@ -6,7 +6,10 @@ from cath_alphaflow.commands.extract_plddt_and_lur import (
     get_average_plddt_from_plddt_string,
     get_LUR_residues_percentage,
 )
-from cath_alphaflow.models.domains import Chopping, LURSummary, Segment
+from cath_alphaflow.models.domains import (
+    ChoppingSeqres,
+    LURSummary,
+)
 
 
 UNIPROT_IDS = ["P00520"]
@@ -35,7 +38,7 @@ def create_fake_cif_path(tmp_root_path, cif_id, cif_src=EXAMPLE_CIF_FILE):
 def test_extract_plddt_summary(tmp_path):
     acc_id = "test1"
     cif_path = create_fake_cif_path(tmp_path, acc_id)
-    chopping = Chopping(segments=[Segment("10", "20")])
+    chopping = ChoppingSeqres.from_str("10-20")
 
     average_plddt = get_average_plddt_from_plddt_string(
         cif_path, chopping=chopping, acc_id=acc_id
@@ -43,7 +46,7 @@ def test_extract_plddt_summary(tmp_path):
 
     assert average_plddt == 33.71
 
-    chopping = Chopping(segments=[Segment("10", "20"), Segment("20", "35")])
+    chopping = ChoppingSeqres.from_str("10-20,20-35")
 
     average_plddt = get_average_plddt_from_plddt_string(
         cif_path, chopping=chopping, acc_id=acc_id
@@ -59,7 +62,7 @@ def get_total_residues_from_chopping(chopping):
 def test_extract_LUR_summary(tmp_path):
     acc_id = "test1"
     cif_path = create_fake_cif_path(tmp_path, acc_id)
-    chopping = Chopping(segments=[Segment("10", "20")])
+    chopping = ChoppingSeqres.from_str("10-20")
 
     lur_summary = get_LUR_residues_percentage(
         cif_path, chopping=chopping, acc_id=acc_id
@@ -74,7 +77,7 @@ def test_extract_LUR_summary(tmp_path):
     del chopping
     del lur_summary
 
-    chopping = Chopping(segments=[Segment("1", "200"), Segment("200", "1120")])
+    chopping = ChoppingSeqres.from_str("1-200,200-1120")
 
     lur_summary = get_LUR_residues_percentage(
         cif_path, chopping=chopping, acc_id=acc_id
