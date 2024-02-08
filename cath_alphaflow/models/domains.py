@@ -1,8 +1,17 @@
 import logging
 import re
-from typing import List, Callable, Tuple
+from typing import (
+    List,
+    Callable,
+    Tuple,
+    Any,
+    Union,
+    Pattern,
+    Type,
+    ClassVar,
+)
 from dataclasses import dataclass, asdict
-from pydantic import BaseModel as PyBaseModel, ConfigDict
+from pydantic import BaseModel as PyBaseModel, ConfigDict, field_validator
 
 from ..errors import ParseError, NoMatchingFragmentError
 from ..constants import (
@@ -30,7 +39,7 @@ LOG = logging.getLogger(__name__)
 
 
 class BaseModel(PyBaseModel):
-    model_config = ConfigDict(protected_namespaces=())
+    model_config = ConfigDict(protected_namespaces=(), arbitrary_types_allowed=True)
 
 
 class CrhBase(BaseModel):
@@ -129,35 +138,87 @@ class PredictedCathDomain(BaseModel):
     indp_evalue: float
 
 
-@dataclass
-class Segment:
+class SegmentBase(BaseModel):
+
+    start: Union[int, str]
+    end: Union[int, str]
+
+    def deep_copy(self):
+        return self.__class__(start=self.start, end=self.end)
+
+
+class SegmentInt(SegmentBase):
+
     start: int
     end: int
 
-    def deep_copy(self):
-        return Segment(start=self.start, end=self.end)
+    @field_validator("start", "end")
+    @classmethod
+    def validate_field(cls, field):
+        assert isinstance(
+            field, int
+        ), f"expected segment field '{field}' to be int (got {type(field)})"
+        return field
 
 
-@dataclass
-class Chopping:
-    segments: List[Segment]
+class SegmentStr(SegmentBase):
+
+    start: str
+    end: str
+
+    @field_validator("start", "end")
+    @classmethod
+    def validate_field(cls, field):
+        if not isinstance(field, str):
+            LOG.warning(
+                f"expected SegmentStr field '{field}' to be type str (got {type(field)})"
+            )
+        return str(field)
+
+
+class ChoppingBase(BaseModel):
+    segments: List[SegmentInt] | List[SegmentStr]
     map_to_uniprot_residue: Callable = None
 
-    RE_SEGMENT_SPLITTER = re.compile(r"[_,]")
-    RE_SEGMENT_PARSER = re.compile(r"(?P<start>[0-9]+)-(?P<end>[0-9]+)")
+    RE_SEGMENT_SPLITTER: ClassVar[Pattern] = re.compile(r"[_,]")
+    RE_SEGMENT_PARSER: ClassVar[Pattern] = None
+
+    SEGMENT_CLASS: ClassVar[Type[Union[SegmentInt, SegmentStr]]] = None
+
+    @classmethod
+    def segment_splitter():
+        return
+
+    @classmethod
+    def segment_class(cls):
+        if cls.SEGMENT_CLASS is None:
+            raise NotImplementedError(
+                "expected SEGMENT_CLASS to be set in inheriting class"
+            )
+        return cls.SEGMENT_CLASS
+
+    @classmethod
+    def new_segment(cls, start, end):
+        segment_class = cls.segment_class()
+        return segment_class(start=start, end=end)
 
     @classmethod
     def from_str(cls, chopping_str: str):
         segs = []
+        seg_class = cls.segment_class()
         for seg_str in re.split(cls.RE_SEGMENT_SPLITTER, chopping_str):
             match = cls.RE_SEGMENT_PARSER.match(seg_str)
             if not match:
                 msg = f"failed to match segment '{seg_str}'"
                 raise ParseError(msg)
-
-            seg = Segment(start=int(match.group("start")), end=int(match.group("end")))
+            start = match.group("start")
+            end = match.group("end")
+            if seg_class == SegmentInt:
+                start = int(start)
+                end = int(end)
+            seg = cls.new_segment(start=start, end=end)
             segs.append(seg)
-        return Chopping(segments=segs)
+        return cls(segments=segs)
 
     def filter_bio_residues(self, residues: List[Tuple[str, int, str]]):
         """
@@ -191,11 +252,10 @@ class Chopping:
 
     def deep_copy(self):
         new_segments = [s.deep_copy() for s in self.segments]
-        return Chopping(segments=new_segments)
+        return self.__class__(segments=new_segments)
 
     def residue_count(self):
-        res_count = sum([seg.end - seg.start + 1 for seg in self.segments])
-        return res_count
+        raise NotImplementedError("needs to be implemented by inheriting class")
 
     @property
     def first_residue(self):
@@ -211,6 +271,36 @@ class Chopping:
             _map_str = f"map_to_uniprot_residue(1 => {self.map_to_uniprot_residue(1)})"
 
         return f"<Chopping str='{self.to_str()}' {_map_str}>"
+
+    def as_pdbreslabel(self):
+        raise NotImplementedError
+
+
+class ChoppingSeqres(ChoppingBase):
+    RE_SEGMENT_PARSER: ClassVar[Pattern] = re.compile(
+        r"(?P<start>[0-9]+)-(?P<end>[0-9]+)"
+    )
+    SEGMENT_CLASS: ClassVar[Type[SegmentInt]] = SegmentInt
+
+    def residue_count(self):
+        res_count = sum([seg.end - seg.start + 1 for seg in self.segments])
+        return res_count
+
+    def as_pdbreslabel(self):
+        segs = [
+            SegmentStr(start=str(seg.start), end=str(seg.end)) for seg in self.segments
+        ]
+        return ChoppingPdbResLabel(segments=segs)
+
+
+class ChoppingPdbResLabel(ChoppingBase):
+    RE_SEGMENT_PARSER: ClassVar[Pattern] = re.compile(
+        r"(?P<start>-?[0-9]+[A-Z]?)-(?P<end>-?[0-9]+[A-Z]?)"
+    )
+    SEGMENT_CLASS: ClassVar[Type[SegmentStr]] = SegmentStr
+
+    def as_pdbreslabel(self):
+        return self
 
 
 @dataclass
@@ -251,7 +341,7 @@ class AFChainID:
 @dataclass
 class GeneralDomainID:
     raw_id: str
-    chopping: Chopping = None
+    chopping: ChoppingPdbResLabel = None
     acc: str = None
     version: str = None
 
@@ -263,7 +353,7 @@ class GeneralDomainID:
             LOG.error(msg)
             raise ParseError(msg)
 
-        chopping = Chopping.from_str(match.group("chopping"))
+        chopping = ChoppingPdbResLabel.from_str(match.group("chopping"))
 
         domid = GeneralDomainID(
             raw_id=match.group("raw_id"),
@@ -279,7 +369,7 @@ class GeneralDomainID:
         segments = chopping.segments
         domain_residues = []
         for segment in segments:
-            for res in range(segment.start, segment.end + 1):
+            for res in range(int(segment.start), int(segment.end) + 1):
                 domain_residues.append(res)
         return domain_residues
 
@@ -292,7 +382,8 @@ class GeneralDomainID:
 
 @dataclass
 class AFDomainID(AFChainID):
-    chopping: Chopping
+    chopping: ChoppingSeqres
+    chopping_class: Type[ChoppingSeqres] = ChoppingSeqres
 
     @classmethod
     def from_uniprot_str(
@@ -304,7 +395,7 @@ class AFDomainID(AFChainID):
             LOG.error(msg)
             raise ParseError(msg)
 
-        chopping = Chopping.from_str(match.group("chopping"))
+        chopping = cls.chopping_class.from_str(match.group("chopping"))
 
         # https://alphafold.ebi.ac.uk/faq
         # For human proteins longer than 2,700 amino acids, check the whole proteome download.
@@ -337,7 +428,7 @@ class AFDomainID(AFChainID):
                 f"using AF fragment {fragment_number} for chopping {chopping} (id: {raw_id})"
             )
 
-        domid = AFDomainID(
+        domid = cls(
             uniprot_acc=match.group("uniprot_acc"),
             fragment_number=fragment_number,
             version=version,
@@ -350,11 +441,11 @@ class AFDomainID(AFChainID):
     def from_str(cls, raw_domid: str):
         match = RE_AF_DOMAIN_ID.match(raw_domid)
         try:
-            domid = AFDomainID(
+            domid = cls(
                 uniprot_acc=match.group("uniprot_acc"),
                 fragment_number=int(match.group("frag_num")),
                 version=int(match.group("version")),
-                chopping=Chopping.from_str(match.group("chopping")),
+                chopping=cls.chopping_class.from_str(match.group("chopping")),
             )
         except (KeyError, AttributeError):
             msg = f"failed to parse AFDomainId from {raw_domid}"
