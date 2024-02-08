@@ -177,7 +177,7 @@ class SegmentStr(SegmentBase):
 
 
 class ChoppingBase(BaseModel):
-    segments: List[SegmentInt] | List[SegmentStr]
+    segments: Union[List[SegmentInt], List[SegmentStr]]
     map_to_uniprot_residue: Callable = None
 
     RE_SEGMENT_SPLITTER: ClassVar[Pattern] = re.compile(r"[_,]")
