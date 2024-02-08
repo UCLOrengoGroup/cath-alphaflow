@@ -9,7 +9,7 @@ from Bio.PDB import MMCIFParser, PDBParser
 from Bio.PDB.mmcifio import MMCIFIO
 from Bio.PDB import PDBIO
 
-from .models.domains import Chopping
+from .models.domains import ChoppingSeqres, ChoppingPdbResLabel
 from .errors import ChoppingError, MultipleModelsError, MultipleChainsError, ParseError
 
 LOG = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ def chop_cif(
     domain_id: str,
     chain_cif_path: Path,
     domain_cif_path: Path,
-    chopping: Chopping,
+    chopping: ChoppingPdbResLabel | ChoppingSeqres,
     map_to_pdb_resid: Callable = default_map_to_pdb_resid,
 ):
     """
@@ -61,7 +61,7 @@ def chop_structure(
     domain_id: str,
     chain_path: Path,
     domain_path: Path,
-    chopping: Chopping,
+    chopping: ChoppingPdbResLabel | ChoppingSeqres,
     map_to_pdb_resid: Callable = default_map_to_pdb_resid,
     file_type: StructureFileType = StructureFileType.PDB,
 ):
@@ -181,10 +181,11 @@ class ChoppingProcessor:
 
     def __init__(
         self,
-        chopping: Union[str, Chopping],
+        chopping: Union[str, ChoppingPdbResLabel | ChoppingSeqres],
         on_segment_residue: Callable,
         *,
         map_to_pdb_resid: Callable = default_map_to_pdb_resid,
+        chopping_class=ChoppingPdbResLabel,
     ):
         """
         Args:
@@ -194,7 +195,7 @@ class ChoppingProcessor:
         """
 
         if isinstance(chopping, str):
-            chopping = Chopping.from_str(chopping)
+            chopping = chopping_class.from_str(chopping)
         self.chopping = chopping
         self.map_to_pdb_resid = map_to_pdb_resid
         self.on_segment_residue = on_segment_residue
