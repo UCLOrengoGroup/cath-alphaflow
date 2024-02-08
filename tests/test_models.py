@@ -1,7 +1,14 @@
 import pytest
 
 from cath_alphaflow.errors import ParseError
-from cath_alphaflow.models.domains import Segment, Chopping, AFChainID, AFDomainID
+from cath_alphaflow.models.domains import (
+    SegmentStr,
+    SegmentInt,
+    ChoppingPdbResLabel,
+    ChoppingSeqres,
+    AFChainID,
+    AFDomainID,
+)
 
 
 def test_af_ids():
@@ -21,18 +28,32 @@ def test_af_ids():
     assert f"{dom}" == dom_id
     assert dom.af_domain_id == dom_id
     assert dom.af_chain_id == chain_id
-    assert dom.chopping.segments == [Segment(start=12, end=234)]
+    assert dom.chopping.segments == [SegmentInt(start=12, end=234)]
     del dom
 
 
 def test_chopping_parser():
 
-    assert Chopping.from_str("123-456") == Chopping(
-        segments=[Segment(start=123, end=456)]
+    assert ChoppingSeqres.from_str("123-456") == ChoppingSeqres(
+        segments=[SegmentInt(start=123, end=456)]
     )
 
-    assert Chopping.from_str("123-456_789-1230") == Chopping(
-        segments=[Segment(start=123, end=456), Segment(start=789, end=1230)],
+    assert ChoppingSeqres.from_str("123-456_789-1230") == ChoppingSeqres(
+        segments=[
+            SegmentInt(start=123, end=456),
+            SegmentInt(start=789, end=1230),
+        ],
+    )
+
+    assert ChoppingPdbResLabel.from_str("123-456") == ChoppingPdbResLabel(
+        segments=[SegmentStr(start="123", end="456")]
+    )
+
+    assert ChoppingPdbResLabel.from_str("123-456_789-1230") == ChoppingPdbResLabel(
+        segments=[
+            SegmentStr(start="123", end="456"),
+            SegmentStr(start="789", end="1230"),
+        ],
     )
 
 
@@ -61,7 +82,7 @@ def test_af_domain_parser():
         uniprot_acc="P00520",
         fragment_number=1,
         version=3,
-        chopping=Chopping(segments=[Segment(start=12, end=234)]),
+        chopping=ChoppingSeqres.from_str("12-234"),
     )
 
     bad_ids = [
@@ -83,9 +104,7 @@ def test_af_domain_from_uniprot():
         uniprot_acc="P00520",
         fragment_number=1,
         version=4,
-        chopping=Chopping(
-            segments=[Segment(start=12, end=23), Segment(start=34, end=45)]
-        ),
+        chopping=ChoppingSeqres.from_str("12-23,34-45"),
     )
 
     assert (
