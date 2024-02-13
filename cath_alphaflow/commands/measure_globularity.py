@@ -9,8 +9,8 @@ from cath_alphaflow.io_utils import get_csv_dictreader
 from cath_alphaflow.io_utils import get_csv_dictwriter
 from cath_alphaflow.io_utils import get_pdb_structure
 from cath_alphaflow.models.domains import GeneralDomainID
-from cath_alphaflow.models.domains import Chopping
-from cath_alphaflow.models.domains import Segment
+from cath_alphaflow.models.domains import ChoppingPdbResLabel
+from cath_alphaflow.models.domains import SegmentStr
 
 from cath_alphaflow.constants import DEFAULT_GLOB_DISTANCE, DEFAULT_GLOB_VOLUME
 
@@ -120,7 +120,7 @@ def measure_globularity(
     )
 
     for domain_id in general_domain_provider:
-        LOG.debug(f"Working on: {domain_id} ...")
+        LOG.info(f"Working on: {domain_id} ...")
 
         model_structure = get_pdb_structure(
             domain_id, pdb_dir, chains_are_gzipped, pdb_suffix=pdb_suffix
@@ -133,7 +133,7 @@ def measure_globularity(
         domain_normed_radius_gyration = calculate_normed_radius_of_gyration(
             domain_id, model_structure, volume_resolution
         )
-        LOG.debug(
+        LOG.info(
             f"Processed entry: {domain_id}\tpacking_density:{domain_packing_density}\tgyration:{domain_normed_radius_gyration}"
         )
         globularity_writer.writerow(
@@ -283,7 +283,7 @@ def calculate_normed_radius_of_gyration(
 
 def guess_chopping_from_pdb_file(
     pdbfile, target_chain_id=None, assume_all_atom_breaks_are_segments=True
-) -> Chopping:
+) -> ChoppingPdbResLabel:
     """
     Reverse engineer a `Chopping` object from a PDB file
 
@@ -330,7 +330,7 @@ def guess_chopping_from_pdb_file(
 
             if assume_all_atom_breaks_are_segments:
                 if res_label != last_res_label and atom_num != last_atom_num + 1:
-                    segments.append(Segment(start=start_res, end=last_res_label))
+                    segments.append(SegmentStr(start=start_res, end=last_res_label))
                     start_res = None
                     end_res = None
 
@@ -338,9 +338,9 @@ def guess_chopping_from_pdb_file(
             last_atom_num = atom_num
 
     if start_res and end_res:
-        segments.append(Segment(start=start_res, end=end_res))
+        segments.append(SegmentStr(start=start_res, end=end_res))
 
-    return Chopping(segments=segments)
+    return ChoppingPdbResLabel(segments=segments)
 
 
 def yield_domain_from_pdbdir(pdbdir, pdb_suffix=".pdb") -> GeneralDomainID:
@@ -375,7 +375,7 @@ def yield_domain_from_consensus_domain_list(consensus_domain_list) -> GeneralDom
     for domain_row in consensus_domain_list_reader:
         domain = GeneralDomainID(
             raw_id=domain_row["domain_id"],
-            chopping=Chopping.from_str(domain_row["chopping"]),
+            chopping=ChoppingPdbResLabel.from_str(domain_row["chopping"]),
         )
         yield domain
 
@@ -425,6 +425,6 @@ def yield_domain_from_chainsaw_domain_list_csv(
         domain = GeneralDomainID(
             # raw_id=domain_id,
             raw_id=chain_id,
-            chopping=Chopping.from_str(domain_row["chopping"]),
+            chopping=ChoppingPdbResLabel.from_str(domain_row["chopping"]),
         )
         yield domain

@@ -14,7 +14,11 @@ from cath_alphaflow.commands.measure_globularity import (
     calculate_normed_radius_of_gyration,
     calculate_packing_density,
 )
-from cath_alphaflow.models.domains import GeneralDomainID, Chopping, Segment
+from cath_alphaflow.models.domains import (
+    GeneralDomainID,
+    ChoppingPdbResLabel,
+    SegmentStr,
+)
 from cath_alphaflow.chopping import chop_structure
 
 PDB_ID = "2xdqA"
@@ -81,7 +85,7 @@ def test_globularity_for_domain_matches_chain_with_chopping():
 
     chain_structure = PDBParser().get_structure(model_id, pdb_path)
 
-    chopping = Chopping.from_str("135-366")
+    chopping = ChoppingPdbResLabel.from_str("135-366")
     domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
 
     chain_with_chopping_packing_density = calculate_packing_density(
@@ -112,7 +116,7 @@ def test_calculate_normed_radius_of_gyration_af():
 
     model_structure = PDBParser().get_structure(model_id, pdb_path)
 
-    chopping = Chopping.from_str("1-432")
+    chopping = ChoppingPdbResLabel.from_str("1-432")
     domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
     gyration_radius = calculate_normed_radius_of_gyration(domain_id, model_structure, 5)
     assert gyration_radius == expected_gyration_radius
@@ -122,7 +126,7 @@ def test_calculate_normed_radius_of_gyration_af():
     del gyration_radius
 
     # if we change the chopping then the gyration radius should also change
-    chopping = Chopping.from_str("100-200")
+    chopping = ChoppingPdbResLabel.from_str("100-200")
     domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
     gyration_radius = calculate_normed_radius_of_gyration(domain_id, model_structure, 5)
     assert gyration_radius != expected_gyration_radius
@@ -135,7 +139,7 @@ def test_calculate_normed_radius_of_gyration_cath():
 
     model_structure = PDBParser().get_structure(model_id, pdb_path)
 
-    chopping = Chopping.from_str("6-459")
+    chopping = ChoppingPdbResLabel.from_str("6-459")
     domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
     gyration_radius = calculate_normed_radius_of_gyration(domain_id, model_structure, 5)
     assert gyration_radius == expected_gyration_radius
@@ -153,7 +157,7 @@ def test_calculate_normed_radius_of_gyration_cath():
     del gyration_radius
 
     # if we change the chopping then the gyration radius should also change
-    chopping = Chopping.from_str("100-200")
+    chopping = ChoppingPdbResLabel.from_str("100-200")
     domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
     gyration_radius = calculate_normed_radius_of_gyration(domain_id, model_structure, 5)
     assert gyration_radius != expected_gyration_radius
@@ -169,7 +173,7 @@ def test_calculate_packing_density_af():
 
     model_structure = PDBParser().get_structure(model_id, pdb_path)
 
-    chopping = Chopping.from_str("1-432")
+    chopping = ChoppingPdbResLabel.from_str("1-432")
     domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
     packing_density = calculate_packing_density(domain_id, model_structure, 5)
     assert packing_density == 9.422
@@ -181,7 +185,7 @@ def test_calculate_packing_density_cath():
 
     model_structure = PDBParser().get_structure(model_id, pdb_path)
 
-    chopping = Chopping.from_str("6-459")
+    chopping = ChoppingPdbResLabel.from_str("6-459")
     domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
     packing_density = calculate_packing_density(domain_id, model_structure, 5)
     assert packing_density == 12.363
@@ -193,7 +197,7 @@ def test_globularity_pdb():
 
     model_structure = PDBParser().get_structure(model_id, pdb_path)
 
-    chopping = Chopping.from_str("135-366")
+    chopping = ChoppingPdbResLabel.from_str("135-366")
     domain_id = GeneralDomainID(raw_id=model_id, chopping=chopping)
 
     packing_density_all = calculate_packing_density(domain_id, model_structure, 5)

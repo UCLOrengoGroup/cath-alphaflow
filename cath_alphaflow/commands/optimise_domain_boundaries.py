@@ -8,10 +8,10 @@ import click
 
 from cath_alphaflow.io_utils import get_af_domain_id_reader
 from cath_alphaflow.io_utils import get_csv_dictwriter
-from cath_alphaflow.models.domains import AFDomainID, Segment, Chopping
+from cath_alphaflow.models.domains import AFDomainID, SegmentStr, ChoppingPdbResLabel
 from cath_alphaflow.errors import NoMatchingResiduesError
 from cath_alphaflow.io_utils import get_status_log_dictwriter
-from cath_alphaflow.constants import STATUS_LOG_SUCCESS,STATUS_LOG_FAIL
+from cath_alphaflow.constants import STATUS_LOG_SUCCESS, STATUS_LOG_FAIL
 from cath_alphaflow.seq_utils import get_local_plddt_for_res
 
 LOG = logging.getLogger()
@@ -48,7 +48,7 @@ LOG = logging.getLogger()
     "--gzipped_af_chains",
     type=bool,
     default=False,
-    help="Set True if AF-chain files are stored in .gz files"
+    help="Set True if AF-chain files are stored in .gz files",
 )
 @click.option(
     "--af_domain_mapping_post_tailchop",
@@ -68,7 +68,7 @@ LOG = logging.getLogger()
     "status_log_file",
     type=click.File("wt"),
     required=True,
-    help="Log file recording if domains have been optimised or reason for skipping"
+    help="Log file recording if domains have been optimised or reason for skipping",
 )
 def optimise_domain_boundaries(
     af_domain_list,
@@ -108,18 +108,21 @@ def optimise_domain_boundaries(
             af_domain_id_post_tailchop = calculate_domain_id_post_tailchop(
                 af_domain_id, af_chain_mmcif_dir, cutoff_plddt_score, gzipped_af_chains
             )
-            
+
             if af_domain_id == af_domain_id_post_tailchop:
                 description = f"boundaries unchanged"
             else:
                 description = f"adjusted boundaries from {af_domain_id} to {af_domain_id_post_tailchop}"
-            write_status_log(status_log, af_domain_id, STATUS_LOG_SUCCESS, None, description)
-            
+            write_status_log(
+                status_log, af_domain_id, STATUS_LOG_SUCCESS, None, description
+            )
+
         except NoMatchingResiduesError:
-            description = 'boundaries not adjusted due to low pLDDT'
+            description = "boundaries not adjusted due to low pLDDT"
             af_domain_id_post_tailchop = af_domain_id
-            write_status_log(status_log,af_domain_id,STATUS_LOG_SUCCESS,None,description)
-            
+            write_status_log(
+                status_log, af_domain_id, STATUS_LOG_SUCCESS, None, description
+            )
 
         af_domain_list_post_tailchop_writer.writerow(
             {"af_domain_id": af_domain_id_post_tailchop}
@@ -134,24 +137,47 @@ def optimise_domain_boundaries(
 
     click.echo("DONE")
 
+
+def get_residues_from_range(residues, start_res: str, end_res: str):
+    chopping = ChoppingPdbResLabel(
+        segments=[SegmentStr(start=str(start_res), end=str(end_res))]
+    )
+    selected_residues = chopping.filter_bio_residues(residues)
+    return selected_residues
+
+
+def biopdb_residue_to_str(res):
+    res_num = res.id[1]
+    ins_code = res.id[2]
+    if ins_code == " ":
+        ins_code = ""
+    return f"{res_num}{ins_code}"
+
+
 def cut_segment(
-    structure, segment_to_cut: Segment, cutoff_plddt_score, cut_start, cut_end
-) -> Segment:
+    structure, segment_to_cut: SegmentStr, cutoff_plddt_score, cut_start, cut_end
+) -> SegmentStr:
     # Cuts one boundary based on the cutoff_plddt_score and returns the reduced boundary
 
     new_boundary_lower_value = boundary_lower_value = segment_to_cut.start
     new_boundary_higher_value = boundary_higher_value = segment_to_cut.end
-    
+
     exception_info = (
         f"(structure: {structure}, start:{boundary_lower_value}"
         f", end:{boundary_higher_value}, cutoff:{cutoff_plddt_score})"
     )
+    all_residues = structure.get_residues()
+
+    bounded_residues = get_residues_from_range(
+        all_residues, boundary_lower_value, boundary_higher_value
+    )
+
     if cut_start:
-        for res in range(boundary_lower_value, boundary_higher_value):
+        for res in bounded_residues:
             local_plddt = get_local_plddt_for_res(structure, res)
             if local_plddt > cutoff_plddt_score:
                 break
-            new_boundary_lower_value = res
+            new_boundary_lower_value = biopdb_residue_to_str(res)
         else:
             # this only runs if we haven't already broken out of the loop
             msg = (
@@ -160,12 +186,12 @@ def cut_segment(
             raise NoMatchingResiduesError(msg)
 
     if cut_end:
-        for res in range(boundary_higher_value, boundary_lower_value, -1):
+        for res in bounded_residues[::-1]:  # use slice step to reverse through residues
             local_plddt = get_local_plddt_for_res(structure, res)
             if local_plddt > cutoff_plddt_score:
                 break
 
-            new_boundary_higher_value = res
+            new_boundary_higher_value = biopdb_residue_to_str(res)
         else:
             # this only runs if we haven't already broken out of the loop
             msg = f"failed to find residues over plddt cutoff from end {exception_info}"
@@ -175,16 +201,16 @@ def cut_segment(
         msg = f"matching new boundary start/end ({new_boundary_higher_value}) {exception_info}"
         raise NoMatchingResiduesError(msg)
 
-    new_segment = Segment(
-        start=new_boundary_lower_value, end=new_boundary_higher_value
+    new_segment = SegmentStr(
+        start=str(new_boundary_lower_value), end=str(new_boundary_higher_value)
     )
 
     return new_segment
 
 
 def cut_chopping_start(
-    structure, chopping: Chopping, cutoff_plddt_score: float
-) -> Chopping:
+    structure, chopping: ChoppingPdbResLabel, cutoff_plddt_score: float
+) -> ChoppingPdbResLabel:
     # Cut from the start of the first boundary until a residue has a pLDDT score > cutoff_plddt_score
 
     # take a copy so we don't change existing data
@@ -212,12 +238,12 @@ def cut_chopping_start(
         msg = f"failed to get new start segment with chopping {chopping}"
         raise NoMatchingResiduesError(msg)
 
-    return Chopping(segments=new_segments)
+    return chopping.__class__(segments=new_segments)
 
 
 def cut_chopping_end(
-    structure, chopping: Chopping, cutoff_plddt_score: float
-) -> Chopping:
+    structure, chopping: ChoppingPdbResLabel, cutoff_plddt_score: float
+) -> ChoppingPdbResLabel:
     # Cut from the end of the last boundary until a residue has a pLDDT score > cutoff_plddt_score
 
     # take a copy so we don't change existing data
@@ -245,7 +271,7 @@ def cut_chopping_end(
         msg = f"failed to get new end segment with chopping {chopping}"
         raise NoMatchingResiduesError(msg)
 
-    return Chopping(segments=new_segments)
+    return chopping.__class__(segments=new_segments)
 
 
 def calculate_domain_id_post_tailchop(
@@ -292,7 +318,7 @@ def calculate_domain_id_post_tailchop(
             # We do this by first cutting from the start and then from the end.
 
             # make a copy so we don't touch the old chopping
-            _chopping = old_chopping.deep_copy()
+            _chopping = old_chopping.deep_copy().as_pdbreslabel()
 
             # adjust the start of the new chopping
             _chopping = cut_chopping_start(structure, _chopping, cutoff_plddt_score)
@@ -304,17 +330,17 @@ def calculate_domain_id_post_tailchop(
 
     # create a new AF domain id with the new chopping
     af_domain_id_post_tailchop = af_domain_id.deep_copy()
-    af_domain_id_post_tailchop.chopping = Chopping(segments=new_segments)
+    af_domain_id_post_tailchop.chopping = ChoppingPdbResLabel(segments=new_segments)
 
     return af_domain_id_post_tailchop
 
+
 def write_status_log(status_log, entry_id, status, error, description):
     status_log.writerow(
-                {
-                "entry_id": entry_id,
-                "status": status,
-                "error": error,
-                "description": description,
-                }
-            )
-                
+        {
+            "entry_id": entry_id,
+            "status": status,
+            "error": error,
+            "description": description,
+        }
+    )

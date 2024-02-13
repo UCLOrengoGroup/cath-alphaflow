@@ -1,14 +1,20 @@
 import hashlib
+import logging
+import re
+
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from Bio.PDB import MMCIFParser
+from Bio.PDB import Structure
+from Bio.PDB.Residue import Residue
 from Bio.SeqUtils import seq1
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from pathlib import Path
-import logging
 
 LOG = logging.getLogger(__name__)
+
+RE_RESIDUE_LABEL = re.compile(r"^(?P<residue_number>-?[0-9]+)(?P<insert_code>[A-Z])?$")
 
 
 def str_to_md5(in_str):
@@ -45,7 +51,7 @@ def write_fasta_file(header, sequence, fasta_out_file):
     """Write a FASTA file with the given header and sequence to the specified directory,
     optionally appending to a multi-FASTA file if it already exists.
     """
-    record = SeqRecord(Seq(sequence), id=header, description='')
+    record = SeqRecord(Seq(sequence), id=header, description="")
     SeqIO.write(record, fasta_out_file, "fasta")
 
 
@@ -60,9 +66,10 @@ def combine_fasta_files(fasta_in_dir, fasta_out_file):
                 for seq_record in SeqIO.parse(fasta_file, "fasta"):
                     SeqIO.write(seq_record, fasta_out_fh, "fasta")
 
+
 def get_local_plddt_for_res(
-    structure,
-    residue_num: int,
+    structure: Structure,
+    residue: Residue,
     *,
     model_num: int = 0,
     chain_id: str = "A",
@@ -71,4 +78,17 @@ def get_local_plddt_for_res(
     """
     Returns the local pLDDT score for a given residue
     """
-    return structure[model_num][chain_id][residue_num][atom_type].get_bfactor()
+    if isinstance(residue, Residue):
+        res = residue.id
+    elif isinstance(residue, int):
+        res = (" ", residue, " ")
+    elif isinstance(residue, str):
+        match = RE_RESIDUE_LABEL.match(residue)
+        if not match:
+            raise ValueError(f"failed to parse '{residue}' as residue label")
+        ins_code = match.group("insert_code")
+        if not ins_code:
+            ins_code = " "
+        res = (" ", int(match.group("residue_number")), ins_code)
+
+    return structure[model_num][chain_id][res][atom_type].get_bfactor()

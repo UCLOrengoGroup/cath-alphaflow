@@ -9,7 +9,11 @@ from Bio.PDB import MMCIFParser
 from Bio.PDB import PDBParser
 from Bio.PDB.Polypeptide import protein_letters_3to1
 
-from cath_alphaflow.models.domains import Chopping, AFDomainID
+from cath_alphaflow.models.domains import (
+    ChoppingSeqres,
+    ChoppingPdbResLabel,
+    AFDomainID,
+)
 from cath_alphaflow.chopping import ChoppingProcessor
 from cath_alphaflow.chopping import chop_cif
 from cath_alphaflow.chopping import chop_structure
@@ -65,7 +69,7 @@ def example_chopping_str():
 
 @pytest.fixture
 def example_expected_resids(example_chopping_str):
-    chopping = Chopping.from_str(example_chopping_str)
+    chopping = ChoppingPdbResLabel.from_str(example_chopping_str)
     expected_resids = [
         (" ", resnum, " ")
         for seg in chopping.segments
@@ -79,7 +83,7 @@ def test_chopping_processor(
 ):
     domain_resnames = []
     chopper = ChoppingProcessor(
-        Chopping.from_str(example_chopping_str),
+        ChoppingPdbResLabel.from_str(example_chopping_str),
         on_segment_residue=lambda res: domain_resnames.append(res.id),
     )
     chopper.process_chain(example_cif_chain)
@@ -100,7 +104,7 @@ def test_chopping_processor_from_str(
 
 def test_chop_cif(example_cif_tmpfile, example_chopping_str, example_expected_resids):
     new_cif_tmpfile = tempfile.NamedTemporaryFile(mode="wt", suffix=".cif")
-    example_chopping = Chopping.from_str(example_chopping_str)
+    example_chopping = ChoppingPdbResLabel.from_str(example_chopping_str)
 
     chop_cif(
         domain_id="1abc",
@@ -128,7 +132,7 @@ def test_chop_pdb():
         (" ", i, " ") for i in list(range(135, 159 + 1)) + list(range(198, 366 + 1))
     ]
     new_pdb_tmpfile = tempfile.NamedTemporaryFile(mode="wt", suffix=".pdb")
-    example_chopping = Chopping.from_str(example_chopping_str)
+    example_chopping = ChoppingPdbResLabel.from_str(example_chopping_str)
 
     chop_structure(
         domain_id="1abc",
@@ -156,7 +160,7 @@ def test_chopping_equals_filter_bio_residues():
         (" ", i, " ") for i in list(range(135, 159 + 1)) + list(range(198, 366 + 1))
     ]
     new_pdb_tmpfile = tempfile.NamedTemporaryFile(mode="wt", suffix=".pdb")
-    example_chopping = Chopping.from_str(example_chopping_str)
+    example_chopping = ChoppingPdbResLabel.from_str(example_chopping_str)
 
     # get the residues by chopping the file
     chop_structure(
@@ -225,7 +229,7 @@ def test_chop_gzip_cif(example_chopping_str, example_expected_resids):
     """
 
     new_cif_tmpfile = tempfile.NamedTemporaryFile(suffix=".cif.gz")
-    example_chopping = Chopping.from_str(example_chopping_str)
+    example_chopping = ChoppingPdbResLabel.from_str(example_chopping_str)
 
     chop_cif(
         domain_id="1abc",
