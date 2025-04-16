@@ -24,11 +24,11 @@ from ..constants import (
 RE_UNIPROT_ID = re.compile(r"(?P<uniprot_acc>[0-9A-Z]{6}|[0-9A-Z]{10})$")
 
 RE_AF_CHAIN_ID = re.compile(
-    r"^AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9])-model_v(?P<version>[0-9]+)$"
+    r"^AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9]+)-model_v(?P<version>[0-9]+)$"
 )
 
 RE_AF_DOMAIN_ID = re.compile(
-    r"^(?P<raw_id>AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9])-model_v(?P<version>[0-9]+))[/\-](?P<chopping>[0-9\-_]+)$"
+    r"^(?P<raw_id>AF-(?P<uniprot_acc>[0-9A-Z]+)-F(?P<frag_num>[0-9]+)-model_v(?P<version>[0-9]+))[/\-](?P<chopping>[0-9\-_]+)$"
 )
 
 RE_UNIPROT_DOMAIN_ID = re.compile(
