@@ -157,7 +157,7 @@ def get_LUR_residues_percentage(cif_path: Path, *, chopping=None, acc_id=None):
     LUR_res = 0
     LUR_stretch = False
     min_res_lur = MIN_LENGTH_LUR
-    for residue in segment_plddt:
+    for residue in chopping_plddt:
         plddt_res = float(residue)
         if plddt_res < 70:
             LUR_res += 1
