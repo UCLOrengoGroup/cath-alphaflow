@@ -77,15 +77,15 @@ def test_extract_LUR_summary(tmp_path):
     del chopping
     del lur_summary
 
-    chopping = ChoppingSeqres.from_str("1-200,200-1120")
+    chopping = ChoppingSeqres.from_str("10-20,100-110")
 
     lur_summary = get_LUR_residues_percentage(
         cif_path, chopping=chopping, acc_id=acc_id
     )
 
     assert lur_summary == LURSummary(
-        LUR_perc=47.55,
-        LUR_total=533,
+        LUR_perc=50,
+        LUR_total=11,
         residues_total=get_total_residues_from_chopping(chopping),
     )
     del chopping
