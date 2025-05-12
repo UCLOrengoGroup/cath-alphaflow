@@ -46,7 +46,7 @@ LOG = logging.getLogger()
 @click.option(
     "--af_version",
     type=int,
-    help=f"Option: specify the AF version when parsing uniprot ids",
+    help="Option: specify the AF version when parsing uniprot ids",
 )
 @click.option(
     "--cif_suffix",
