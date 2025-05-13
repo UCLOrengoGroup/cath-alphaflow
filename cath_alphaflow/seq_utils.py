@@ -1,3 +1,4 @@
+import gzip
 import hashlib
 import logging
 from pathlib import Path
@@ -57,28 +58,61 @@ def pdb_to_seq(pdb_file, model=0, chain=0):
     return sequence
 
 
+def cif_to_md5(cif_path=Path, chain_id=0, chopping=None):
+    """
+    Convert a CIF file to a sequence string and return the MD5
+    """
+
+    if not cif_path.exists():
+        msg = f"failed to locate CIF input file {cif_path}"
+        LOG.error(msg)
+        raise FileNotFoundError(msg)
+
+    _hdr, seq = cif_to_fasta(cif_path, chain_id=chain_id)
+    if chopping:
+        # apply chopping to sequence
+        seq = "".join(
+            [
+                seq[int(segment.start) - 1 : int(segment.end)]
+                for segment in chopping.segments
+            ]
+        )
+
+    md5 = str_to_md5(seq)
+    return md5
+
+
 # TODO add chain_id exception
 def cif_to_fasta(cif_path=Path, chain_id=0):
     if not cif_path.exists():
         msg = f"failed to locate CIF input file {cif_path}"
         LOG.error(msg)
-        # raise FileNotFoundError(msg)
-    header = cif_path.stem
-    structure = MMCIF2Dict(cif_path)
-    if "_entity_poly.pdbx_seq_one_letter_code" in structure:
-        sequence = structure["_entity_poly.pdbx_seq_one_letter_code"][0].replace(
-            "\n", ""
-        )
+        raise FileNotFoundError(msg)
+
+    if cif_path.name.endswith(".gz"):
+        open_func = gzip.open
     else:
-        parser = MMCIFParser()
-        structure = parser.get_structure(header, cif_path)
-        model = structure[0]
-        chain = model[chain_id]
-        sequence = ""
-        for residue in chain:
-            resname = residue.get_resname()
-            if seq1(resname) != "X":
-                sequence += seq1(resname)
+        open_func = open
+
+    with open_func(str(cif_path), mode="rt") as cif_fh:
+        header = cif_path.stem
+        structure = MMCIF2Dict(cif_fh)
+
+        if "_entity_poly.pdbx_seq_one_letter_code" in structure:
+            sequence = structure["_entity_poly.pdbx_seq_one_letter_code"][0].replace(
+                "\n", ""
+            )
+        else:
+            parser = MMCIFParser()
+            structure = parser.get_structure(header, cif_path)
+            model = structure[0]
+            chain = model[chain_id]
+            sequence = ""
+            for residue in chain:
+                resname = residue.get_resname()
+                if seq1(resname) != "X":
+                    sequence += seq1(resname)
+
     return header, sequence
 
 
@@ -169,6 +203,7 @@ def guess_chopping_from_biostructure(
                 for atom in residue.get_unpacked_list():
 
                     atom_num = atom.get_serial_number()
+                    # LOG.info(f"atom_num: {atom_num}, res_label: {res_label}")
 
                     # If we haven't specified a chain, then we take the first one we see
                     if not target_chain_id:
@@ -191,7 +226,9 @@ def guess_chopping_from_biostructure(
                             LOG.info(
                                 f"found discontinuity in residue numbering: {last_res_label} -> {res_label} ({last_atom_num} -> {atom_num})"
                             )
-                            segments.append(SegmentStr(start=start_res, end=end_res))
+                            segments.append(
+                                SegmentStr(start=start_res, end=last_res_label)
+                            )
                             start_res = None
                             end_res = None
 
