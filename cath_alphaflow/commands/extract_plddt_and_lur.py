@@ -7,6 +7,7 @@ from cath_alphaflow.io_utils import (
     yield_first_col,
     get_plddt_summary_writer,
 )
+from cath_alphaflow.seq_utils import cif_to_md5
 from cath_alphaflow.models.domains import AFDomainID, LURSummary, pLDDTSummary
 from cath_alphaflow.constants import (
     MIN_LENGTH_LUR,
@@ -91,10 +92,15 @@ def convert_cif_to_plddt_summary(
             LOG.error(msg)
             raise FileNotFoundError(msg)
 
+        # get md5 hash of cif file
+
+        md5 = cif_to_md5(cif_path, chopping=chopping)
+
         avg_plddt = get_average_plddt_from_plddt_string(cif_path, chopping=chopping)
         perc_LUR_summary = get_LUR_residues_percentage(cif_path, chopping=chopping)
         plddt_stats = pLDDTSummary(
             af_domain_id=str(af_domain_id),
+            md5=md5,
             avg_plddt=avg_plddt,
             perc_LUR=perc_LUR_summary.LUR_perc,
             residues_total=perc_LUR_summary.residues_total,
