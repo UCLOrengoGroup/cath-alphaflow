@@ -4,8 +4,8 @@ from click.testing import CliRunner
 from cath_alphaflow.cli import cli
 from cath_alphaflow.commands.extract_plddt_and_lur import (
     get_average_plddt_from_plddt_string,
-    get_LUR_residues_percentage,
 )
+from cath_alphaflow.commands.extract_plddt_and_lur import get_LUR_residues_percentage
 from cath_alphaflow.models.domains import (
     ChoppingSeqres,
     LURSummary,
