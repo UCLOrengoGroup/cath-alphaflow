@@ -574,6 +574,7 @@ class SecStrSummary:
 @dataclass
 class pLDDTSummary:
     af_domain_id: str
+    md5: str
     avg_plddt: float
     perc_LUR: float
     residues_total: int

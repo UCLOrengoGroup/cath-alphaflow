@@ -269,6 +269,7 @@ def get_plddt_summary_writer(csvfile):
         csvfile,
         fieldnames=[
             "af_domain_id",
+            "md5",
             "avg_plddt",
             "perc_LUR",
             "residues_total",
@@ -280,6 +281,7 @@ def get_plddt_summary_writer(csvfile):
 
 def yield_first_col(infile, *, header=True):
     if header:
+        LOG.warning("Skipping first line of input file")
         next(infile)
     for line in infile:
         first_col = line.split()[0].strip()  # take ID from first column

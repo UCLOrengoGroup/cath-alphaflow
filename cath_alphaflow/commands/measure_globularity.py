@@ -1,16 +1,18 @@
-from Bio.PDB import Structure, MMCIFParser, Selection, NeighborSearch
+from Bio.PDB import Structure, Selection, NeighborSearch
 import logging
 from pathlib import Path
-import gzip
 import numpy as np
 import click
+
+from typing import Iterator
 
 from cath_alphaflow.io_utils import get_csv_dictreader
 from cath_alphaflow.io_utils import get_csv_dictwriter
 from cath_alphaflow.io_utils import get_pdb_structure
+from cath_alphaflow.seq_utils import biostructure_to_md5
+from cath_alphaflow.seq_utils import guess_chopping_from_biostructure
 from cath_alphaflow.models.domains import GeneralDomainID
 from cath_alphaflow.models.domains import ChoppingPdbResLabel
-from cath_alphaflow.models.domains import SegmentStr
 
 from cath_alphaflow.constants import DEFAULT_GLOB_DISTANCE, DEFAULT_GLOB_VOLUME
 
@@ -20,8 +22,8 @@ LOG = logging.getLogger()
 
 # Path: cath_alphaflow/commands/measure_globularity.py
 
-# --consensus_domain_list /cluster/project9/afdb_domain_ext/results/proteome_consensus_domains.domain_summary.tsv
-# ==
+
+# cath-af-cli measure-globularity --pdb_dir tests/fixtures/pdb
 
 
 @click.command()
@@ -107,6 +109,7 @@ def measure_globularity(
         domain_globularity,
         fieldnames=[
             "model_id",
+            "md5",
             "chopping",
             "packing_density",
             "normed_radius_gyration",
@@ -126,6 +129,16 @@ def measure_globularity(
             domain_id, pdb_dir, chains_are_gzipped, pdb_suffix=pdb_suffix
         )
 
+        md5 = biostructure_to_md5(model_structure)
+
+        if domain_id.chopping:
+            chopping = domain_id.chopping
+        else:
+            chopping = guess_chopping_from_biostructure(model_structure)
+            LOG.warning(
+                f"Domain {domain_id} does not have a chopping, guessed from structure: {chopping.to_str()}"
+            )
+
         domain_packing_density = calculate_packing_density(
             domain_id, model_structure, distance_cutoff
         )
@@ -139,7 +152,8 @@ def measure_globularity(
         globularity_writer.writerow(
             {
                 "model_id": domain_id.raw_id,
-                "chopping": domain_id.chopping.to_str() if domain_id.chopping else "-",
+                "md5": md5,
+                "chopping": chopping.to_str(),
                 "packing_density": domain_packing_density,
                 "normed_radius_gyration": domain_normed_radius_gyration,
             }
@@ -244,24 +258,36 @@ def calculate_normed_radius_of_gyration(
 
     coords = []
     masses = []
+
+    reference_masses = {
+        "C": 12.0107,
+        "O": 15.9994,
+        "N": 14.0067,
+        "S": 32.065,
+    }
+
     # Fill lists for the coords and masses for all atoms in the domain
     for residue in target_residues:
+
+        hetatom = residue.get_id()[0]
+        if hetatom != " ":
+            # Skip heteroatoms
+            continue
+
         for atom in residue:
             coords.append(atom.coord.tolist())
-            if atom.element == "C":
-                masses.append(12.0107)
-            elif (
-                atom.element == "H"
-            ):  # We do not consider hydrogens for the radius of gyration
-                masses.append(0.0)
-            elif atom.element == "O":
-                masses.append(15.9994)
-            elif atom.element == "N":
-                masses.append(14.0067)
-            elif atom.element == "S":
-                masses.append(32.065)
+
+            if atom.element == "H":
+                # Skip hydrogens
+                continue
+
+            if atom.element in reference_masses:
+                masses.append(reference_masses[atom.element])
+
             else:
-                raise Exception(f"Protein contains unknown atom type {atom.element}")
+                raise Exception(
+                    f"Structure contains unexpected atom type {atom.element} (residue {residue.get_resname()}, residue id {residue.get_id()})"
+                )
 
     # Calculate the radius of gyration
     mass_coords = [(m * i, m * j, m * k) for (i, j, k), m in zip(coords, masses)]
@@ -281,69 +307,7 @@ def calculate_normed_radius_of_gyration(
     return round(radius_gyration / radius_gyration_sphere, 3)
 
 
-def guess_chopping_from_pdb_file(
-    pdbfile, target_chain_id=None, assume_all_atom_breaks_are_segments=True
-) -> ChoppingPdbResLabel:
-    """
-    Reverse engineer a `Chopping` object from a PDB file
-
-    'Real' PDB files can have weird residue numberings, so it is not possible to
-    reliably know whether a PDB file has been chopped by an external process
-    (i.e. a CATH domain) or whether the numbering in the original PDB is just weird.
-    The best we can do is guess, i.e. check for cases where the sequential atom number
-    is not contiguous.
-
-    If `assume_all_atom_breaks_are_segments` is turned off then we just create a chopping
-    with a single segment that spans the entire PDB file.
-    """
-
-    pdbpath = Path(str(pdbfile))
-    segments = []
-    start_res = None
-    end_res = None
-    last_atom_num = None
-    last_res_label = None
-    with pdbpath.open("rt") as fh:
-        for line in fh:
-            if not line.startswith("ATOM"):
-                continue
-
-            atom_num = int(line[6:11])
-            chain_id = line[21]
-            res_label = line[22:27].strip()  # includes the (optional) insert code
-
-            # if we haven't specified a chain, then we take the first one we see
-            if not target_chain_id:
-                target_chain_id = chain_id
-
-            if not last_atom_num:
-                last_atom_num = atom_num
-            if not last_res_label:
-                last_res_label = res_label
-
-            if chain_id != target_chain_id:
-                continue
-
-            if not start_res:
-                start_res = res_label
-            end_res = res_label
-
-            if assume_all_atom_breaks_are_segments:
-                if res_label != last_res_label and atom_num != last_atom_num + 1:
-                    segments.append(SegmentStr(start=start_res, end=last_res_label))
-                    start_res = None
-                    end_res = None
-
-            last_res_label = res_label
-            last_atom_num = atom_num
-
-    if start_res and end_res:
-        segments.append(SegmentStr(start=start_res, end=end_res))
-
-    return ChoppingPdbResLabel(segments=segments)
-
-
-def yield_domain_from_pdbdir(pdbdir, pdb_suffix=".pdb") -> GeneralDomainID:
+def yield_domain_from_pdbdir(pdbdir, pdb_suffix=".pdb") -> Iterator[GeneralDomainID]:
     pdbdir = Path(str(pdbdir))
     for pdbpath in pdbdir.iterdir():
         if not str(pdbpath).endswith(pdb_suffix):
@@ -352,7 +316,9 @@ def yield_domain_from_pdbdir(pdbdir, pdb_suffix=".pdb") -> GeneralDomainID:
         yield GeneralDomainID(raw_id=model_id, chopping=None)
 
 
-def yield_domain_from_consensus_domain_list(consensus_domain_list) -> GeneralDomainID:
+def yield_domain_from_consensus_domain_list(
+    consensus_domain_list,
+) -> Iterator[GeneralDomainID]:
     consensus_domain_list_reader = get_csv_dictreader(
         consensus_domain_list,
         fieldnames=[
@@ -382,7 +348,7 @@ def yield_domain_from_consensus_domain_list(consensus_domain_list) -> GeneralDom
 
 def yield_domain_from_chainsaw_domain_list_csv(
     consensus_domain_list,
-) -> GeneralDomainID:
+) -> Iterator[GeneralDomainID]:
     """
 
     ```
