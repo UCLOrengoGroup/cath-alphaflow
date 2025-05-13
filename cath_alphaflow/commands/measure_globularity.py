@@ -4,12 +4,15 @@ from pathlib import Path
 import numpy as np
 import click
 
+from typing import Iterator
+
 from cath_alphaflow.io_utils import get_csv_dictreader
 from cath_alphaflow.io_utils import get_csv_dictwriter
 from cath_alphaflow.io_utils import get_pdb_structure
 from cath_alphaflow.seq_utils import biostructure_to_md5
 from cath_alphaflow.seq_utils import guess_chopping_from_biostructure
 from cath_alphaflow.models.domains import GeneralDomainID
+from cath_alphaflow.models.domains import ChoppingPdbResLabel
 
 from cath_alphaflow.constants import DEFAULT_GLOB_DISTANCE, DEFAULT_GLOB_VOLUME
 
@@ -304,7 +307,7 @@ def calculate_normed_radius_of_gyration(
     return round(radius_gyration / radius_gyration_sphere, 3)
 
 
-def yield_domain_from_pdbdir(pdbdir, pdb_suffix=".pdb") -> GeneralDomainID:
+def yield_domain_from_pdbdir(pdbdir, pdb_suffix=".pdb") -> Iterator[GeneralDomainID]:
     pdbdir = Path(str(pdbdir))
     for pdbpath in pdbdir.iterdir():
         if not str(pdbpath).endswith(pdb_suffix):
@@ -313,7 +316,9 @@ def yield_domain_from_pdbdir(pdbdir, pdb_suffix=".pdb") -> GeneralDomainID:
         yield GeneralDomainID(raw_id=model_id, chopping=None)
 
 
-def yield_domain_from_consensus_domain_list(consensus_domain_list) -> GeneralDomainID:
+def yield_domain_from_consensus_domain_list(
+    consensus_domain_list,
+) -> Iterator[GeneralDomainID]:
     consensus_domain_list_reader = get_csv_dictreader(
         consensus_domain_list,
         fieldnames=[
@@ -343,7 +348,7 @@ def yield_domain_from_consensus_domain_list(consensus_domain_list) -> GeneralDom
 
 def yield_domain_from_chainsaw_domain_list_csv(
     consensus_domain_list,
-) -> GeneralDomainID:
+) -> Iterator[GeneralDomainID]:
     """
 
     ```
