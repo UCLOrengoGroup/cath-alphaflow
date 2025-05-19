@@ -1,25 +1,25 @@
+import csv
+import logging
 import os
 from pathlib import Path
-import csv
 import tempfile
 
-import pytest
 from click.testing import CliRunner
 from Bio.PDB import PDBParser
 
 from cath_alphaflow.cli import cli
 from cath_alphaflow.commands.measure_globularity import (
-    measure_globularity,
-    guess_chopping_from_pdb_file,
     calculate_normed_radius_of_gyration,
     calculate_packing_density,
 )
 from cath_alphaflow.models.domains import (
     GeneralDomainID,
     ChoppingPdbResLabel,
-    SegmentStr,
 )
 from cath_alphaflow.chopping import chop_structure
+from cath_alphaflow.seq_utils import guess_chopping_from_pdb_file
+
+LOG = logging.getLogger(__name__)
 
 PDB_ID = "2xdqA"
 AF_ID = "AF-Q96HM7-F1-model_v4"
