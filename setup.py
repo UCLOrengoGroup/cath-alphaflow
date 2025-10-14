@@ -17,7 +17,7 @@ setup(
     description="Workflow to assign CATH domains to protein structural models predicted by AlphaFold",
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
-    author=["Ian Sillitoe", "Nicola Bordin"],
+    author="Ian Sillitoe",
     url="https://github.com/sillitoe/cath-alphaflow",
     project_urls={
         "Issues": "https://github.com/sillitoe/cath-alphaflow/issues",
@@ -38,8 +38,10 @@ setup(
         "prettyconf",
         "biopython",
         "pdb-tools",
-        "pydantic",
+        "pydantic>=2.0,<2.12,!=2.41.3",  # Exclude corrupted version
+        "pydantic-core!=2.41.3,<2.41",  # Exclude corrupted version
         "pymongo",
+        "biopython",
     ],
     extras_require={"test": ["pytest"]},
     python_requires=">=3.7",
