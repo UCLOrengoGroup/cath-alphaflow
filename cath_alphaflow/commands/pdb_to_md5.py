@@ -4,7 +4,7 @@ from pathlib import Path
 import click
 
 from cath_alphaflow.io_utils import get_csv_dictwriter
-from cath_alphaflow.seq_utils import pdb_to_seq, str_to_md5
+from cath_alphaflow.seq_utils import pdb_to_chain_seqs, str_to_md5
 from cath_alphaflow.errors import ParseError
 
 LOG = logging.getLogger()
@@ -39,17 +39,27 @@ def pdb_to_md5(input_file, input_dir, output_file):
         return
 
     with open(output_file, "w", newline="") as output_fh:
-        fieldnames = ["id", "md5"]
+        fieldnames = ["pdb_file", "chain", "md5", "sequence"]
         writer = get_csv_dictwriter(output_fh, fieldnames=fieldnames)
         writer.writeheader()
 
         def process_pdb_file(pdb_path):
             LOG.info(f"Processing PDB file: {pdb_path}")
             try:
-                pdb_id = Path(pdb_path).stem
-                sequence = pdb_to_seq(pdb_path)
-                md5_checksum = str_to_md5(sequence)
-                writer.writerow({"id": pdb_id, "md5": md5_checksum})
+                pdb_file = Path(pdb_path).name
+                # Get all chain sequences from the PDB file
+                chain_seqs = pdb_to_chain_seqs(pdb_path)
+
+                for chain_id, sequence in chain_seqs:
+                    md5_checksum = str_to_md5(sequence)
+                    writer.writerow(
+                        {
+                            "pdb_file": pdb_file,
+                            "chain": chain_id,
+                            "md5": md5_checksum,
+                            "sequence": sequence,
+                        }
+                    )
             except Exception as e:
                 LOG.error(f"Error processing {pdb_path}: {e}")
                 raise ParseError(f"Failed to parse PDB file {pdb_path}") from e

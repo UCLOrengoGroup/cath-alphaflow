@@ -42,21 +42,23 @@ def biostructure_to_md5(structure: Structure) -> str:
     return str_to_md5(sequence)
 
 
-def pdb_to_seq(pdb_file, model=0, chain=None):
+def pdb_to_chain_seqs(pdb_file, model=0, chain=None):
     """
-    Convert a PDB file to a sequence string.
+    Convert a PDB file to chain sequences.
 
     Args:
         pdb_file: Path to the PDB file
         model: Model number (default: 0)
-        chain: Chain ID to extract. If None, returns the first chain.
-               If specified, errors if the chain doesn't exist.
+        chain: Chain ID to extract. If None, returns all chains.
+               If specified, returns only that chain.
 
     Returns:
-        str: The sequence of the specified or first chain.
+        list: A list of tuples (chain_id, sequence) for each chain.
+              If a specific chain is requested, returns a list with one tuple.
 
     Raises:
         KeyError: If the specified chain does not exist in the PDB file.
+        ValueError: If the PDB file contains no chains.
     """
     parser = PDBParser()
     structure = parser.get_structure("PDB", pdb_file)
@@ -64,24 +66,30 @@ def pdb_to_seq(pdb_file, model=0, chain=None):
 
     chains = list(model.get_chains())
 
+    if not chains:
+        raise ValueError(f"PDB file {pdb_file} contains no chains")
+
+    result = []
+
     if chain is None:
-        # No chain specified, use the first chain
-        if not chains:
-            raise ValueError(f"PDB file {pdb_file} contains no chains")
-
-        # Warn if there are multiple chains
-        if len(chains) > 1:
-            chain_ids = [c.id for c in chains]
-            LOG.warning(
-                f"PDB file {pdb_file} contains {len(chains)} chains ({', '.join(chain_ids)}). "
-                f"Using the first chain ({chains[0].id})."
-            )
-
-        target_chain = chains[0]
+        # No chain specified, return all chains
+        for chain_obj in chains:
+            sequence = ""
+            for residue in chain_obj:
+                resname = residue.get_resname()
+                if seq1(resname) != "X":
+                    sequence += seq1(resname)
+            result.append((chain_obj.id, sequence))
     else:
         # Chain specified, get that specific chain
         try:
             target_chain = model[chain]
+            sequence = ""
+            for residue in target_chain:
+                resname = residue.get_resname()
+                if seq1(resname) != "X":
+                    sequence += seq1(resname)
+            result.append((chain, sequence))
         except KeyError:
             chain_ids = [c.id for c in chains]
             raise KeyError(
@@ -89,12 +97,7 @@ def pdb_to_seq(pdb_file, model=0, chain=None):
                 f"Available chains: {', '.join(chain_ids)}"
             ) from None
 
-    sequence = ""
-    for residue in target_chain:
-        resname = residue.get_resname()
-        if seq1(resname) != "X":
-            sequence += seq1(resname)
-    return sequence
+    return result
 
 
 def cif_to_md5(cif_path: Path, chain_id=0, chopping=None):
