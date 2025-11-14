@@ -17,7 +17,7 @@ from .commands import create_md5
 from .commands import convert_cif_to_fasta
 from .commands import load_mongo
 from .commands import measure_globularity
-from .commands import measure_globularity_af_cif
+from .commands import pdb_to_md5
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s"
@@ -65,7 +65,7 @@ cli.add_command(run_foldseek.run_foldseek)
 cli.add_command(convert_foldseek_output_to_summary.convert_foldseek_output_to_summary)
 cli.add_command(chop_domain.chop_cif_command)
 cli.add_command(create_md5.create_md5)
+cli.add_command(pdb_to_md5.pdb_to_md5)
 cli.add_command(convert_cif_to_fasta.convert_cif_to_fasta)
 cli.add_command(load_mongo.load_af_from_archive)
 cli.add_command(measure_globularity.measure_globularity)
-cli.add_command(measure_globularity_af_cif.measure_globularity_af_cif)

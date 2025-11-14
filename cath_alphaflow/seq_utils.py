@@ -42,23 +42,62 @@ def biostructure_to_md5(structure: Structure) -> str:
     return str_to_md5(sequence)
 
 
-def pdb_to_seq(pdb_file, model=0, chain=0):
+def pdb_to_seq(pdb_file, model=0, chain=None):
     """
     Convert a PDB file to a sequence string.
+
+    Args:
+        pdb_file: Path to the PDB file
+        model: Model number (default: 0)
+        chain: Chain ID to extract. If None, returns the first chain.
+               If specified, errors if the chain doesn't exist.
+
+    Returns:
+        str: The sequence of the specified or first chain.
+
+    Raises:
+        KeyError: If the specified chain does not exist in the PDB file.
     """
     parser = PDBParser()
     structure = parser.get_structure("PDB", pdb_file)
     model = structure[model]
-    chain = model[chain]
+
+    chains = list(model.get_chains())
+
+    if chain is None:
+        # No chain specified, use the first chain
+        if not chains:
+            raise ValueError(f"PDB file {pdb_file} contains no chains")
+
+        # Warn if there are multiple chains
+        if len(chains) > 1:
+            chain_ids = [c.id for c in chains]
+            LOG.warning(
+                f"PDB file {pdb_file} contains {len(chains)} chains ({', '.join(chain_ids)}). "
+                f"Using the first chain ({chains[0].id})."
+            )
+
+        target_chain = chains[0]
+    else:
+        # Chain specified, get that specific chain
+        try:
+            target_chain = model[chain]
+        except KeyError:
+            chain_ids = [c.id for c in chains]
+            raise KeyError(
+                f"Chain '{chain}' not found in PDB file {pdb_file}. "
+                f"Available chains: {', '.join(chain_ids)}"
+            ) from None
+
     sequence = ""
-    for residue in chain:
+    for residue in target_chain:
         resname = residue.get_resname()
         if seq1(resname) != "X":
             sequence += seq1(resname)
     return sequence
 
 
-def cif_to_md5(cif_path=Path, chain_id=0, chopping=None):
+def cif_to_md5(cif_path: Path, chain_id=0, chopping=None):
     """
     Convert a CIF file to a sequence string and return the MD5
     """
@@ -83,7 +122,7 @@ def cif_to_md5(cif_path=Path, chain_id=0, chopping=None):
 
 
 # TODO add chain_id exception
-def cif_to_fasta(cif_path=Path, chain_id=0):
+def cif_to_fasta(cif_path: Path, chain_id=0):
     if not cif_path.exists():
         msg = f"failed to locate CIF input file {cif_path}"
         LOG.error(msg)
