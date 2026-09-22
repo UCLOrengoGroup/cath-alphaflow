@@ -264,6 +264,7 @@ def calculate_normed_radius_of_gyration(
         "O": 15.9994,
         "N": 14.0067,
         "S": 32.065,
+        "SE": 78.971,
     }
 
     # Fill lists for the coords and masses for all atoms in the domain
