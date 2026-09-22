@@ -278,8 +278,8 @@ def calculate_normed_radius_of_gyration(
         for atom in residue:
             coords.append(atom.coord.tolist())
 
-            if atom.element == "H":
-                # Skip hydrogens
+            if atom.element in {"H", "D"}:
+                # Skip hydrogen and its deuterium isotope.
                 continue
 
             if atom.element in reference_masses:
